@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="bootstrap.min.css">
+
+    <title>Energy Report for {{nmi}}</title>
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>Energy Report for {{nmi}} <small class="text-muted">{{start|yearmonth}} to {{end|yearmonth}}</small></h1>
+
+        <img src="{{imp_overview_chart}}" class="img-fluid">
+
+        {% if exp_overview_chart %}
+        <img src="{{exp_overview_chart}}" class="img-fluid">
+        {% endif %}
+
+
+
+        
+        <h2>Seasonal Usage <small class="text-muted">Daily kWh</small></h2>
+
+        <table class="table table-sm table-striped">
+            <thead class="thead-light">
+                <tr>
+                    <th>Year</th>
+                    <th>☀️ Summer</th>
+                    <th>🍂Autumn</th>
+                    <th>❄️Winter</th>
+                    <th>🌼Spring</th>
+                    <th>🏡Year</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for year in season_data|sort(reverse = True) %}
+                <tr>
+                    <td>{{ year }}</td>
+                    <td>{{ season_data[year]['Summer'][0] }}</td>
+                    <td>{{ season_data[year]['Autumn'][0] }}</td>
+                    <td>{{ season_data[year]['Winter'][0] }}</td>
+                    <td>{{ season_data[year]['Spring'][0] }}</td>
+                    <td>{{ season_data[year]['Year'][0] }}</td>
+                </tr>
+                {% endfor %}
+
+    </div><!-- Container -->
+       
+</body>
+
+</html>
