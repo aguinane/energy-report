@@ -5,7 +5,7 @@ from typing import List
 from pydantic import BaseModel
 from sqlite_utils import Database
 from statistics import mean
-
+import pandas as pd
 
 db = Database("nemdata.db")
 
@@ -90,8 +90,8 @@ def update_daily_summaries():
     for nmi in nmis:
         items = calc_daily_summary(nmi)
         db["daily_reads"].upsert_all(
-                items, pk=("nmi", "day"), column_order=("nmi", "day")
-            )
+            items, pk=("nmi", "day"), column_order=("nmi", "day")
+        )
     logging.info("Updated day data")
 
 
@@ -171,6 +171,34 @@ def update_seasonal_summaries():
     for nmi in nmis:
         items = calc_seasonal_summary(nmi)
         db["season_reads"].upsert_all(
-                items, pk=("nmi", "year", "season"), column_order=("nmi", "year", "season")
-            )
+            items, pk=("nmi", "year", "season"), column_order=("nmi", "year", "season")
+        )
     logging.info("Updated seasonal data")
+
+
+def get_usage_df(nmi: str):
+    channels = []
+    for row in db.query("select * from nmi_summary where nmi = :nmi", {"nmi": nmi}):
+        channels.append(row["channel"])
+
+    channels = []
+    for row in db.query("select * from nmi_summary where nmi = :nmi", {"nmi": nmi}):
+        channels.append(row["channel"])
+
+    imp_values = defaultdict(int)
+    exp_values = defaultdict(int)
+    for ch in channels:
+        feed_in = True if ch in ["B1"] else False
+        for read in get_readings(nmi, ch):
+            dt = read.start
+            if feed_in:
+                exp_values[dt] += read.value
+            else:
+                imp_values[dt] += read.value
+
+    df = pd.DataFrame(
+        data={"consumption": [imp_values[x] for x in imp_values]}, index=imp_values.keys()
+    )
+    ser = pd.Series(data=[-exp_values[x] for x in exp_values], index=exp_values.keys())
+    df.loc[:, "export"] = ser
+    return df.fillna(0)
