@@ -2,90 +2,69 @@ import logging
 from datetime import datetime
 from typing import Optional, Generator, Tuple
 import shutil
-from dateutil.parser import isoparse
+
 from pathlib import Path
 import pandas as pd
-from collections import defaultdict
 import calplot
 from sqlite_utils import Database
-from summary import update_daily_summaries
-from summary import update_seasonal_summaries
-from summary import get_nmis
-from summary import get_usage_df
+
+from model import get_nmis, get_date_range
+from model import get_usage_df, get_day_data, get_years
 from jinja2 import Environment, FileSystemLoader
 import plotly.express as px
 import plotly.graph_objects as go
 
-db = Database("nemdata.db")
+db = Database("data/nemdata.db")
+log = logging.getLogger(__name__)
 
 
 def format_month(dt: datetime) -> str:
     return dt.strftime("%b %Y")
 
 
-def get_date_range(nmi: str):
-    sql = """select MIN(first_interval) start, MAX(last_interval) end 
-            from nmi_summary where nmi = :nmi
-            """
-    row = list(db.query(sql, {"nmi": nmi}))[0]
-    start = isoparse(row["start"])
-    end = isoparse(row["end"])
-    return start, end
-
-
-def get_years(nmi: str):
-    start, end = get_date_range(nmi)
-    x = start.year
-    while x <= end.year:
-        yield x
-        x += 1
-
-
-def get_day_data(
-    nmi: str,
-) -> Generator[Tuple[str, float, float, float, float, float, float], None, None]:
-    sql = "select day, imp, exp, imp_morning, imp_day, imp_evening, imp_night from daily_reads where nmi = :nmi"
-    for row in db.query(sql, {"nmi": nmi}):
-        dt = datetime.strptime(row["day"], "%Y-%m-%d")
-        row = (
-            dt,
-            row["imp"],
-            row["exp"],
-            row["imp_morning"],
-            row["imp_day"],
-            row["imp_evening"],
-            row["imp_night"],
-        )
-        yield row
-
-
-def get_import_overview_chart(nmi: str) -> Path:
+def build_daily_usage_chart(nmi: str, kind: str) -> Optional[Path]:
     """Save calendar plot"""
     days = []
     data = []
-    for dt, imp, _, _, _, _, _ in get_day_data(nmi):
+    for dt, imp, exp, _, _, _, _ in get_day_data(nmi):
         days.append(dt)
-        data.append(imp)
+        exp = -exp  # Make export negative
+        if kind == "import":
+            data.append(imp)
+        elif kind == "export":
+            data.append(exp)
+        elif kind == "total":
+            val = imp + exp
+            data.append(val)
+        else:
+            raise ValueError("Invalid usage chart kind")
+
+    if kind == "export":
+        if min(data) == 0.0:
+            return None
+
+    vmin = max(-35, min(data))
+    vmax = min(35, max(data))
 
     data = pd.Series(data, index=days)
     plot = calplot.calplot(
         data,
-        suptitle=f"Daily kWh for {nmi}",
+        suptitle=f"Daily kWh for {nmi} ({kind})",
         how=None,
-        vmin=0,
-        vmax=35,
+        vmin=vmin,
+        vmax=vmax,
         cmap="YlOrRd",
         daylabels="MTWTFSS",
         colorbar=True,
     )
     fig = plot[0]
-    file_path = Path(f"build/{nmi}_import.png")
+    file_path = Path(f"build/{nmi}_daily_{kind}.png")
     fig.savefig(file_path, bbox_inches="tight")
-    logging.info("Created %s", file_path)
+    log.info("Created %s", file_path)
     return file_path
 
 
-def get_daily_plot(nmi: str) -> str:
+def build_daily_plot(nmi: str) -> str:
     """Save calendar plot"""
 
     day_data = list(get_day_data(nmi))
@@ -98,8 +77,14 @@ def get_daily_plot(nmi: str) -> str:
     }
     index = [x[0] for x in day_data]
     df = pd.DataFrame(index=index, data=data)
-    color_dict = {'export': 'green', 'morning': 'tan', 'day': 'skyblue', 'evening': 'orangered', 'night': 'slategrey'}
-    fig = px.bar(df, x=df.index, y=list(data.keys()), color_discrete_map = color_dict)
+    color_dict = {
+        "export": "green",
+        "morning": "tan",
+        "day": "skyblue",
+        "evening": "orangered",
+        "night": "slategrey",
+    }
+    fig = px.bar(df, x=df.index, y=list(data.keys()), color_discrete_map=color_dict)
     fig.update_xaxes(
         rangeslider_visible=False,
         rangeselector=dict(
@@ -113,45 +98,39 @@ def get_daily_plot(nmi: str) -> str:
             )
         ),
     )
-    file_path = Path(f"build/{nmi}_daily.html")
-    return fig.to_html(file_path, full_html=False, include_plotlyjs="cdn")
+    file_path = Path(f"build/{nmi}_daily_plot.html")
+    fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
+    log.info("Created %s", file_path)
+    return file_path
 
 
-def get_usage_plot(nmi: str) -> str:
-    """Save calendar plot"""
-
+def build_usage_histogram(nmi: str) -> str:
+    """Save heatmap of power usage"""
     df = get_usage_df(nmi)
-    fig = px.line(df, x=df.index, y=["consumption", "export"])
-    file_path = Path(f"build/{nmi}_usage.html")
-    return fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
-
-
-def get_export_overview_chart(nmi: str) -> Optional[Path]:
-    """Save calendar plot"""
-    days = []
-    data = []
-    for dt, _, exp, _, _, _, _ in get_day_data(nmi):
-        if exp:
-            days.append(dt)
-            data.append(exp)
-
-    if len(data) == 0:
-        return None
-    data = pd.Series(data, index=days)
-    plot = calplot.calplot(
-        data,
-        suptitle=f"Daily Export kWh for {nmi}",
-        how=None,
-        vmin=0,
-        vmax=35,
-        cmap="Greens",
-        daylabels="MTWTFSS",
-        colorbar=True,
+    df["power"] = df["consumption"] + df["export"]
+    df["power"] = df["power"].apply(lambda x: x * 12)
+    has_export = True if len(df["export"].unique()) > 1 else False
+    colorscale = "Geyser" if has_export else "YlOrRd"
+    midpoint = 0.0 if has_export else None
+    start, end = get_date_range(nmi)
+    numdays = (end - start).days
+    nbinsx = numdays
+    nbinsy = 96
+    fig = px.density_heatmap(
+        df,
+        x=df.index.date,
+        y=df.index.time,
+        z=df["power"],
+        nbinsx=nbinsx,
+        nbinsy=nbinsy,
+        histfunc="avg",
+        color_continuous_scale=colorscale,
+        color_continuous_midpoint=midpoint,
     )
-    fig = plot[0]
-    file_path = Path(f"build/{nmi}_export.png")
-    fig.savefig(file_path, bbox_inches="tight")
-    logging.info("Created %s", file_path)
+
+    file_path = Path(f"build/{nmi}_usage_histogram.html")
+    fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
+    log.info("Created %s", file_path)
     return file_path
 
 
@@ -231,20 +210,32 @@ def get_year_season_data(nmi: str, year: int):
 def build_report(nmi: str):
     template = env.get_template("nmi-report.html")
     start, end = get_date_range(nmi)
-    fp_imp = get_import_overview_chart(nmi)
-    fp_exp = get_export_overview_chart(nmi)
-    daily_chart = get_daily_plot(nmi)
+    fp_imp = build_daily_usage_chart(nmi, "import")
+    fp_exp = build_daily_usage_chart(nmi, "export")
+    build_daily_usage_chart(nmi, "total")
     has_export = True if fp_exp else None
+
+    """
+    ch_daily_fp = build_daily_plot(nmi)
+    with open(ch_daily_fp, "r") as fh:
+        daily_chart = fh.read()
+    """
+
+    ch_tou_fp = build_usage_histogram(nmi)
+    with open(ch_tou_fp, "r") as fh:
+        tou_chart = fh.read()
+
     report_data = {
         "start": start,
         "end": end,
         "has_export": has_export,
-        "daily_chart": daily_chart,
+        "daily_chart": "",
+        "tou_chart": tou_chart,
         "imp_overview_chart": fp_imp.name,
         "exp_overview_chart": fp_exp.name if has_export else None,
         "season_data": get_seasonal_data(nmi),
     }
-    print(report_data)
+
     output_html = template.render(nmi=nmi, **report_data)
     file_path = f"build/{nmi}.html"
     with open(file_path, "w", encoding="utf-8") as fh:
@@ -255,14 +246,9 @@ def build_report(nmi: str):
 logging.basicConfig(level="INFO")
 Path("build").mkdir(exist_ok=True)
 
-update_daily_summaries()
-update_seasonal_summaries()
-
-
 env = Environment(loader=FileSystemLoader("templates"))
 env.filters["yearmonth"] = format_month
 
 # copy_static_data()
 for nmi in get_nmis():
-
     build_report(nmi)

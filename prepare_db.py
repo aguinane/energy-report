@@ -1,56 +1,29 @@
 import logging
-from datetime import datetime, date
+from pathlib import Path
+from nemreader import output_as_sqlite
+import logging
+from datetime import datetime
 from collections import defaultdict
-from typing import List
-from pydantic import BaseModel
-from sqlite_utils import Database
 from statistics import mean
-import pandas as pd
-
-db = Database("nemdata.db")
-
-
-class EnergyReading(BaseModel):
-    start: datetime
-    value: float
+from model import db
+from model import get_nmis, get_channels, get_readings
+from model import time_of_day, get_season
 
 
-def time_of_day(start: datetime) -> str:
-    """Get time of day period"""
-    s = start
-    if s.hour < 4:
-        return "Night"
-    if s.hour < 9:
-        return "Morning"
-    if s.hour < 16:
-        return "Day"
-    if s.hour < 21:
-        return "Evening"
-    return "Night"
-
-
-def get_nmis() -> List[str]:
-    nmis = []
-    for row in db.query("select distinct nmi from nmi_summary"):
-        nmis.append(row["nmi"])
-    return nmis
-
-
-def get_readings(nmi: str, channel: str) -> List[EnergyReading]:
-    reads = []
-    for r in db.query(
-        "select * from readings where nmi = :nmi and channel = :ch",
-        {"nmi": nmi, "ch": channel},
-    ):
-        read = EnergyReading(start=r["t_start"], value=r["value"])
-        reads.append(read)
-    return reads
+def import_nem_data():
+    output_dir = Path("data/")
+    for fp in output_dir.glob("*.csv"):
+        print("Importing", fp)
+        try:
+            output_as_sqlite(
+                file_name=fp, output_dir="data/", split_days=True, set_interval=5
+            )
+        except:
+            print("Failed to process", fp)
 
 
 def calc_daily_summary(nmi: str):
-    channels = []
-    for row in db.query("select * from nmi_summary where nmi = :nmi", {"nmi": nmi}):
-        channels.append(row["channel"])
+    channels = get_channels(nmi)
 
     imp_values = defaultdict(lambda: defaultdict(int))
     exp_values = defaultdict(int)
@@ -93,35 +66,6 @@ def update_daily_summaries():
             items, pk=("nmi", "day"), column_order=("nmi", "day")
         )
     logging.info("Updated day data")
-
-
-def get_fiscal_year(day: date) -> int:
-    """Get FY ending"""
-    if day.month <= 6:
-        fy = day.year
-    else:
-        fy = day.year + 1
-    return fy
-
-
-def get_season(day: date) -> str:
-    """Get season for day"""
-    if day.month in [1, 2, 12]:
-        return "A - Summer"
-    if day.month in [3, 4, 5]:
-        return "B - Autumn"
-    if day.month in [6, 7, 8]:
-        return "C - Winter"
-    return "D - Spring"
-
-
-def get_season_fy(day: date) -> str:
-    season = get_season(day)
-    if day.month == 12:
-        fyd = str(day.year + 1)
-    else:
-        fyd = str(day.year)
-    return f"{fyd} {season}"
 
 
 def calc_seasonal_summary(nmi: str):
@@ -176,29 +120,8 @@ def update_seasonal_summaries():
     logging.info("Updated seasonal data")
 
 
-def get_usage_df(nmi: str):
-    channels = []
-    for row in db.query("select * from nmi_summary where nmi = :nmi", {"nmi": nmi}):
-        channels.append(row["channel"])
+logging.basicConfig(level="INFO")
 
-    channels = []
-    for row in db.query("select * from nmi_summary where nmi = :nmi", {"nmi": nmi}):
-        channels.append(row["channel"])
-
-    imp_values = defaultdict(int)
-    exp_values = defaultdict(int)
-    for ch in channels:
-        feed_in = True if ch in ["B1"] else False
-        for read in get_readings(nmi, ch):
-            dt = read.start
-            if feed_in:
-                exp_values[dt] += read.value
-            else:
-                imp_values[dt] += read.value
-
-    df = pd.DataFrame(
-        data={"consumption": [imp_values[x] for x in imp_values]}, index=imp_values.keys()
-    )
-    ser = pd.Series(data=[-exp_values[x] for x in exp_values], index=exp_values.keys())
-    df.loc[:, "export"] = ser
-    return df.fillna(0)
+# import_nem_data()
+update_daily_summaries()
+update_seasonal_summaries()
