@@ -6,8 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
 
     <title>Energy Report for {{nmi}}</title>
 </head>
@@ -17,18 +16,8 @@
 
         <h1>Energy Report for {{nmi}} <small class="text-muted">{{start|yearmonth}} to {{end|yearmonth}}</small></h1>
 
-        <img src="{{imp_overview_chart}}" class="img-fluid">
 
-        {% if exp_overview_chart %}
-        <img src="{{exp_overview_chart}}" class="img-fluid">
-        {% endif %}
-
-        {{daily_chart}}
-
-        {{tou_chart}}
-
-
-        <h2>Seasonal Usage <small class="text-muted">Daily kWh</small></h2>
+        <h2>Seasonal Usage <small class="text-muted">Daily Average kWh</small></h2>
 
         <table class="table table-sm table-striped">
             <thead class="thead-light">
@@ -53,8 +42,70 @@
                     <td>{{ season_data[year]['Year'][0] }}</td>
                 </tr>
                 {% endfor %}
-
+            </tbody>
+        </table>
     </div><!-- Container -->
+
+    <img src="{{imp_overview_chart}}" class="img-fluid">
+
+    {% if exp_overview_chart %}
+    <img src="{{exp_overview_chart}}" class="img-fluid">
+    {% endif %}
+
+    {{daily_chart}}
+
+    {{tou_chart}}
+
+
+    <h2>Monthly Usage <small class="text-muted">kWh</small></h2>
+
+    <table class="table table-sm table-striped">
+        <thead class="thead-light">
+            <tr>
+                <th>Month</th>
+                <th>#Days</th>
+                <th>Imp (morning)</th>
+                <th>Imp (day)</th>
+                <th>Imp (evening)</th>
+                <th>Imp (night)</th>
+                <th>Imp (total)</th>
+                <th>Exp</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for row in month_data %}
+            <tr>
+                <td>{{row.month}}</td>
+                <td>{{row.num_days}}</td>
+                <td>{{row.imp_morning|round(2)}}</td>
+                <td>{{row.imp_day|round(2)}}</td>
+                <td>{{row.imp_evening|round(2)}}</td>
+                <td>{{row.imp_night|round(2)}}</td>
+                <td>{{row.imp|round(2)}}</td>
+                <td>{{row.exp|round(2)}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <p>
+    <dl>
+        <dt>Night</dt>
+        <dd>00:00 - 04:00 and 21:00 - 00:00</dd>
+
+        <dt>Morning</dt>
+        <dd>04:00 - 09:00</dd>
+
+        <dt>Day</dt>
+        <dd>09:00 - 16:00</dd>
+
+        <dt>Evening</dt>
+        <dd>16:00 - 21:00</dd>
+    </dl>
+    </p>
+
+
 
 </body>
 

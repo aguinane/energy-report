@@ -1,13 +1,13 @@
 import logging
-from pathlib import Path
-from nemreader import output_as_sqlite
-import logging
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
 from statistics import mean
-from model import db
-from model import get_nmis, get_channels, get_readings
-from model import time_of_day, get_season
+
+from nemreader import output_as_sqlite
+
+from model import (db, get_channels, get_nmis, get_readings, get_season,
+                   time_of_day)
 
 
 def import_nem_data():
@@ -67,6 +67,21 @@ def update_daily_summaries():
         )
     logging.info("Updated day data")
 
+    db.create_view(
+        "monthly_reads",
+        """
+    SELECT nmi, substr(day,1,7) as month, 
+    count(day) as num_days, sum(imp) as imp, sum(exp) as exp, 
+    sum(imp_morning) as imp_morning, sum(imp_day) as imp_day, 
+    sum(imp_evening) as imp_evening, sum(imp_night) as imp_night
+    FROM daily_reads
+    GROUP BY nmi, substr(day,1,7)
+    ORDER BY 1, 2
+    """,
+        replace=True,
+    )
+    logging.info("Created monthly view")
+
 
 def calc_seasonal_summary(nmi: str):
     """Get seasonal summaries"""
@@ -122,6 +137,6 @@ def update_seasonal_summaries():
 
 logging.basicConfig(level="INFO")
 
-# import_nem_data()
+import_nem_data()
 update_daily_summaries()
 update_seasonal_summaries()

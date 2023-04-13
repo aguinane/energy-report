@@ -1,18 +1,19 @@
 import logging
-from datetime import datetime
-from typing import Optional, Generator, Tuple
 import shutil
-
+import webbrowser
+from datetime import datetime
 from pathlib import Path
-import pandas as pd
-import calplot
-from sqlite_utils import Database
+from typing import List, Optional
 
-from model import get_nmis, get_date_range
-from model import get_usage_df, get_day_data, get_years
-from jinja2 import Environment, FileSystemLoader
+import calplot
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from jinja2 import Environment, FileSystemLoader
+from sqlite_utils import Database
+
+from model import (get_date_range, get_day_data, get_nmis, get_usage_df,
+                   get_years)
 
 db = Database("data/nemdata.db")
 log = logging.getLogger(__name__)
@@ -127,6 +128,12 @@ def build_usage_histogram(nmi: str) -> str:
         color_continuous_scale=colorscale,
         color_continuous_midpoint=midpoint,
     )
+    fig.update_layout(
+        xaxis_title=None,
+        yaxis_title=None,
+        legend_title="kW",
+        margin=dict(l=20, r=20, t=20, b=20),
+    )
 
     file_path = Path(f"build/{nmi}_usage_histogram.html")
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
@@ -136,7 +143,7 @@ def build_usage_histogram(nmi: str) -> str:
 
 def copy_static_data():
     """Copy static file"""
-    files = ["bootstrap.min.css"]
+    files = []
     for file in files:
         shutil.copy(f"templates/{file}", f"build/{file}")
 
@@ -207,6 +214,11 @@ def get_year_season_data(nmi: str, year: int):
     return summary
 
 
+def get_month_data(nmi: str):
+    sql = "SELECT * from monthly_reads where nmi = :nmi"
+    return db.query(sql, {"nmi": nmi})
+
+
 def build_report(nmi: str):
     template = env.get_template("nmi-report.html")
     start, end = get_date_range(nmi)
@@ -234,6 +246,7 @@ def build_report(nmi: str):
         "imp_overview_chart": fp_imp.name,
         "exp_overview_chart": fp_exp.name if has_export else None,
         "season_data": get_seasonal_data(nmi),
+        "month_data": get_month_data(nmi),
     }
 
     output_html = template.render(nmi=nmi, **report_data)
@@ -241,6 +254,17 @@ def build_report(nmi: str):
     with open(file_path, "w", encoding="utf-8") as fh:
         fh.write(output_html)
     logging.info("Created %s", file_path)
+    return file_path
+
+
+def build_index(nmis: List[str]):
+    template = env.get_template("index.html")
+    output_html = template.render(nmis=nmis)
+    file_path = "build/index.html"
+    with open(file_path, "w", encoding="utf-8") as fh:
+        fh.write(output_html)
+    logging.info("Created %s", file_path)
+    return file_path
 
 
 logging.basicConfig(level="INFO")
@@ -249,6 +273,9 @@ Path("build").mkdir(exist_ok=True)
 env = Environment(loader=FileSystemLoader("templates"))
 env.filters["yearmonth"] = format_month
 
-# copy_static_data()
-for nmi in get_nmis():
+copy_static_data()
+nmis = get_nmis()
+for nmi in nmis:
     build_report(nmi)
+fp = Path(build_index(nmis)).resolve()
+webbrowser.open(fp.as_uri())

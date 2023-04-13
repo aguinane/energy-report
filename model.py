@@ -1,10 +1,11 @@
-from datetime import datetime, date
 from collections import defaultdict
-from typing import List, Generator, Tuple
-from pydantic import BaseModel
-from sqlite_utils import Database
+from datetime import date, datetime
+from typing import Generator, List, Tuple
+
 import pandas as pd
 from dateutil.parser import isoparse
+from pydantic import BaseModel
+from sqlite_utils import Database
 
 db = Database("data/nemdata.db")
 
@@ -101,7 +102,6 @@ def get_season_fy(day: date) -> str:
 
 
 def get_usage_df(nmi: str) -> pd.DataFrame:
-
     channels = get_channels(nmi)
     imp_values = defaultdict(int)
     exp_values = defaultdict(int)
