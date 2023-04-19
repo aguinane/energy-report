@@ -8,6 +8,11 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
 
+    {% if nmis|length == 1 %}
+    <!-- Only 1 NMI so redirect -->
+    <meta http-equiv="refresh" content="0; url={{nmis[0]}}.html" />
+    {% endif %}
+
     <title>Energy Reports</title>
 </head>
 
