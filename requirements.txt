@@ -1,4 +1,4 @@
-nemreader
+nemreader>=v0.8.3
 jinja2
 pandas
 plotly

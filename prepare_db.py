@@ -4,10 +4,11 @@ from datetime import datetime
 from pathlib import Path
 from statistics import mean
 
-from nemreader import output_as_sqlite
+from nemreader import output_as_sqlite, extend_sqlite
+from nemreader.output_db import get_nmis
+from model import db, get_season
 
-from model import (db, get_channels, get_nmis, get_readings, get_season,
-                   time_of_day)
+DB_PATH = Path("data/") / "nemdata.db"
 
 
 def import_nem_data():
@@ -18,69 +19,10 @@ def import_nem_data():
             output_as_sqlite(
                 file_name=fp, output_dir="data/", split_days=True, set_interval=5
             )
-        except:
+        except Exception:
             print("Failed to process", fp)
 
-
-def calc_daily_summary(nmi: str):
-    channels = get_channels(nmi)
-
-    imp_values = defaultdict(lambda: defaultdict(int))
-    exp_values = defaultdict(int)
-    for ch in channels:
-        feed_in = True if ch in ["B1"] else False
-        for read in get_readings(nmi, ch):
-            day = read.start.strftime("%Y-%m-%d")
-            if feed_in:
-                exp_values[day] += read.value
-            else:
-                tod = time_of_day(read.start)
-                imp_values[day][tod] += read.value
-
-    for day in imp_values.keys():
-        imp1 = round(imp_values[day]["Morning"], 3)
-        imp2 = round(imp_values[day]["Day"], 3)
-        imp3 = round(imp_values[day]["Evening"], 3)
-        imp4 = round(imp_values[day]["Night"], 3)
-        imp = imp1 + imp2 + imp3 + imp4
-        exp = round(exp_values[day], 3)
-        item = {
-            "nmi": nmi,
-            "day": day,
-            "imp": imp,
-            "exp": exp,
-            "imp_morning": imp1,
-            "imp_day": imp2,
-            "imp_evening": imp3,
-            "imp_night": imp4,
-        }
-        yield item
-
-
-def update_daily_summaries():
-    """Write daily summary back to database"""
-    nmis = get_nmis()
-    for nmi in nmis:
-        items = calc_daily_summary(nmi)
-        db["daily_reads"].upsert_all(
-            items, pk=("nmi", "day"), column_order=("nmi", "day")
-        )
-    logging.info("Updated day data")
-
-    db.create_view(
-        "monthly_reads",
-        """
-    SELECT nmi, substr(day,1,7) as month, 
-    count(day) as num_days, sum(imp) as imp, sum(exp) as exp, 
-    sum(imp_morning) as imp_morning, sum(imp_day) as imp_day, 
-    sum(imp_evening) as imp_evening, sum(imp_night) as imp_night
-    FROM daily_reads
-    GROUP BY nmi, substr(day,1,7)
-    ORDER BY 1, 2
-    """,
-        replace=True,
-    )
-    logging.info("Created monthly view")
+    extend_sqlite(DB_PATH)
 
 
 def calc_seasonal_summary(nmi: str):
@@ -126,7 +68,7 @@ def calc_seasonal_summary(nmi: str):
 
 def update_seasonal_summaries():
     """Write seasonal summary back to database"""
-    nmis = get_nmis()
+    nmis = get_nmis(DB_PATH)
     for nmi in nmis:
         items = calc_seasonal_summary(nmi)
         db["season_reads"].upsert_all(
@@ -138,5 +80,4 @@ def update_seasonal_summaries():
 logging.basicConfig(level="INFO")
 
 import_nem_data()
-update_daily_summaries()
 update_seasonal_summaries()

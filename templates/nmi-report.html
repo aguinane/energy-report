@@ -14,12 +14,13 @@
 <body>
     <div class="container">
 
-        <h1>Energy Report for {{nmi}} <small class="text-muted">{{start|yearmonth}} to {{end|yearmonth}}</small></h1>
+        <h1>{{nmi}} <small class="text-muted">{{start|yearmonth}} to {{end|yearmonth}}</small></h1>
 
 
-        <h2>Seasonal Usage <small class="text-muted">Daily Average kWh</small></h2>
+        <h2>Seasonal Usage</h2>
 
         <table class="table table-sm table-striped">
+            <caption>Average daily usage (kWh)</caption>
             <thead class="thead-light">
                 <tr>
                     <th>Year</th>
@@ -28,6 +29,7 @@
                     <th>❄️Winter</th>
                     <th>🌼Spring</th>
                     <th>🏡Year</th>
+                    <th>⬆️Export</th>
                 </tr>
             </thead>
 
@@ -40,6 +42,7 @@
                     <td>{{ season_data[year]['Winter'][0] }}</td>
                     <td>{{ season_data[year]['Spring'][0] }}</td>
                     <td>{{ season_data[year]['Year'][0] }}</td>
+                    <td>{{ season_data[year]['Export'][0] }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -60,6 +63,7 @@
     <h2>Monthly Usage <small class="text-muted">kWh</small></h2>
 
     <table class="table table-sm table-striped">
+        <caption>Total monthly usage (kWh)</caption>
         <thead class="thead-light">
             <tr>
                 <th>Month</th>

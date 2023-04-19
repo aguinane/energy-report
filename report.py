@@ -12,10 +12,11 @@ import plotly.graph_objects as go
 from jinja2 import Environment, FileSystemLoader
 from sqlite_utils import Database
 
-from model import (get_date_range, get_day_data, get_nmis, get_usage_df,
-                   get_years)
+from nemreader.output_db import get_nmis
+from model import get_date_range, get_day_data, get_usage_df, get_years
 
-db = Database("data/nemdata.db")
+DB_PATH = Path("data/") / "nemdata.db"
+db = Database(DB_PATH)
 log = logging.getLogger(__name__)
 
 
@@ -274,7 +275,7 @@ env = Environment(loader=FileSystemLoader("templates"))
 env.filters["yearmonth"] = format_month
 
 copy_static_data()
-nmis = get_nmis()
+nmis = get_nmis(DB_PATH)
 for nmi in nmis:
     build_report(nmi)
 fp = Path(build_index(nmis)).resolve()

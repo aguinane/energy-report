@@ -6,38 +6,17 @@ import pandas as pd
 from dateutil.parser import isoparse
 from pydantic import BaseModel
 from sqlite_utils import Database
+from pathlib import Path
 
-db = Database("data/nemdata.db")
+from nemreader.output_db import get_nmis, get_nmi_channels, get_nmi_readings
+
+DB_PATH = Path("data/") / "nemdata.db"
+db = Database(DB_PATH)
 
 
 class EnergyReading(BaseModel):
     start: datetime
     value: float
-
-
-def get_nmis() -> List[str]:
-    nmis = []
-    for row in db.query("select distinct nmi from nmi_summary"):
-        nmis.append(row["nmi"])
-    return nmis
-
-
-def get_channels(nmi: str) -> List[str]:
-    channels = []
-    for row in db.query("select * from nmi_summary where nmi = :nmi", {"nmi": nmi}):
-        channels.append(row["channel"])
-    return channels
-
-
-def get_readings(nmi: str, channel: str) -> List[EnergyReading]:
-    reads = []
-    for r in db.query(
-        "select * from readings where nmi = :nmi and channel = :ch",
-        {"nmi": nmi, "ch": channel},
-    ):
-        read = EnergyReading(start=r["t_start"], value=r["value"])
-        reads.append(read)
-    return reads
 
 
 def get_date_range(nmi: str) -> Tuple[datetime, datetime]:
@@ -102,12 +81,12 @@ def get_season_fy(day: date) -> str:
 
 
 def get_usage_df(nmi: str) -> pd.DataFrame:
-    channels = get_channels(nmi)
+    channels = get_nmi_channels(DB_PATH, nmi)
     imp_values = defaultdict(int)
     exp_values = defaultdict(int)
     for ch in channels:
         feed_in = True if ch in ["B1"] else False
-        for read in get_readings(nmi, ch):
+        for read in get_nmi_readings(DB_PATH, nmi, ch):
             dt = read.start
             if feed_in:
                 exp_values[dt] += read.value
