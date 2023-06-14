@@ -146,9 +146,9 @@ def build_usage_histogram(nmi: str) -> str:
     fig.update_layout(
         xaxis_title=None,
         yaxis_title=None,
-        legend_title="kW",
         margin=dict(l=20, r=20, t=20, b=20),
     )
+    fig.update_layout(coloraxis=dict(colorbar=dict(title="kW")))
     fig.update_xaxes(dtick="M3", tickformat="%b\n%Y", ticklabelmode="period")
     fig.update_yaxes(dtick=12)
 
