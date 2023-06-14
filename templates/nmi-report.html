@@ -17,6 +17,9 @@
         <h1>{{nmi}} <small class="text-muted">{{start|yearmonth}} to {{end|yearmonth}}</small></h1>
 
 
+
+        {{tou_chart}}
+
         <h2>Seasonal Usage</h2>
 
         <table class="table table-sm table-striped">
@@ -35,81 +38,79 @@
 
             <tbody>
                 {% for year in season_data|sort(reverse = True) %}
+                {% set year_data = season_data[year] %}
                 <tr>
                     <td>{{ year }}</td>
-                    <td>{{ season_data[year]['Summer'][0] }}</td>
-                    <td>{{ season_data[year]['Autumn'][0] }}</td>
-                    <td>{{ season_data[year]['Winter'][0] }}</td>
-                    <td>{{ season_data[year]['Spring'][0] }}</td>
-                    <td>{{ season_data[year]['Year'][0] }}</td>
-                    <td>{{ season_data[year]['Export'][0] }}</td>
+                    <td>{% if year_data['Summer'][0] %}{{ year_data['Summer'][0] }}{% endif %}</td>
+                    <td>{% if year_data['Autumn'][0] %}{{ year_data['Autumn'][0] }}{% endif %}</td>
+                    <td>{% if year_data['Winter'][0] %}{{ year_data['Winter'][0] }}{% endif %}</td>
+                    <td>{% if year_data['Spring'][0] %}{{ year_data['Spring'][0] }}{% endif %}</td>
+                    <td>{% if year_data['Year'][0] %}{{ year_data['Year'][0] }}{% endif %}</td>
+                    <td>{% if year_data['Export'][0] %}{{ year_data['Export'][0] }}{% endif %}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+
+        <h2>Monthly Usage</h2>
+
+        <table class="table table-sm table-striped">
+            <caption>Total monthly usage (kWh)</caption>
+            <thead class="thead-light">
+                <tr>
+                    <th>Month</th>
+                    <th>#Days</th>
+                    <th>Imp (morning)</th>
+                    <th>Imp (day)</th>
+                    <th>Imp (evening)</th>
+                    <th>Imp (night)</th>
+                    <th>Imp (total)</th>
+                    <th>Exp</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for row in month_data %}
+                <tr>
+                    <td>{{row.month}}</td>
+                    <td>{{row.num_days}}{% if row.incomplete %}*{% endif %}</td>
+                    <td>{{row.imp_morning|round(2)}}</td>
+                    <td>{{row.imp_day|round(2)}}</td>
+                    <td>{{row.imp_evening|round(2)}}</td>
+                    <td>{{row.imp_night|round(2)}}</td>
+                    <td>{{row.imp|round(2)}}</td>
+                    <td>{{row.exp|round(2)}}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <p><small>
+                <dl>
+                    <dt>Night</dt>
+                    <dd>00:00 - 04:00 and 21:00 - 00:00</dd>
+
+                    <dt>Morning</dt>
+                    <dd>04:00 - 09:00</dd>
+
+                    <dt>Day</dt>
+                    <dd>09:00 - 16:00</dd>
+
+                    <dt>Evening</dt>
+                    <dd>16:00 - 21:00</dd>
+                </dl>
+            </small>
+        </p>
+
+        <h2>More Charts</h2>
+        <img src="{{imp_overview_chart}}" class="img-fluid">
+
+        {% if exp_overview_chart %}
+        <img src="{{exp_overview_chart}}" class="img-fluid">
+        {% endif %}
+
+        {{daily_chart}}
     </div><!-- Container -->
-
-    <img src="{{imp_overview_chart}}" class="img-fluid">
-
-    {% if exp_overview_chart %}
-    <img src="{{exp_overview_chart}}" class="img-fluid">
-    {% endif %}
-
-    {{daily_chart}}
-
-    {{tou_chart}}
-
-
-    <h2>Monthly Usage <small class="text-muted">kWh</small></h2>
-
-    <table class="table table-sm table-striped">
-        <caption>Total monthly usage (kWh)</caption>
-        <thead class="thead-light">
-            <tr>
-                <th>Month</th>
-                <th>#Days</th>
-                <th>Imp (morning)</th>
-                <th>Imp (day)</th>
-                <th>Imp (evening)</th>
-                <th>Imp (night)</th>
-                <th>Imp (total)</th>
-                <th>Exp</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for row in month_data %}
-            <tr>
-                <td>{{row.month}}</td>
-                <td>{{row.num_days}}</td>
-                <td>{{row.imp_morning|round(2)}}</td>
-                <td>{{row.imp_day|round(2)}}</td>
-                <td>{{row.imp_evening|round(2)}}</td>
-                <td>{{row.imp_night|round(2)}}</td>
-                <td>{{row.imp|round(2)}}</td>
-                <td>{{row.exp|round(2)}}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <p>
-    <dl>
-        <dt>Night</dt>
-        <dd>00:00 - 04:00 and 21:00 - 00:00</dd>
-
-        <dt>Morning</dt>
-        <dd>04:00 - 09:00</dd>
-
-        <dt>Day</dt>
-        <dd>09:00 - 16:00</dd>
-
-        <dt>Evening</dt>
-        <dd>16:00 - 21:00</dd>
-    </dl>
-    </p>
-
-
 
 </body>
 

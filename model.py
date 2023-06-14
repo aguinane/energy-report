@@ -1,14 +1,13 @@
 from collections import defaultdict
 from datetime import date, datetime
-from typing import Generator, List, Tuple
+from pathlib import Path
+from typing import Generator, Tuple
 
 import pandas as pd
 from dateutil.parser import isoparse
+from nemreader.output_db import get_nmi_channels, get_nmi_readings
 from pydantic import BaseModel
 from sqlite_utils import Database
-from pathlib import Path
-
-from nemreader.output_db import get_nmis, get_nmi_channels, get_nmi_readings
 
 DB_PATH = Path("data/") / "nemdata.db"
 db = Database(DB_PATH)

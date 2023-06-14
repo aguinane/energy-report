@@ -1,18 +1,18 @@
 import logging
 import shutil
 import webbrowser
-from datetime import datetime
+from calendar import monthrange
+from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import List, Optional
 
 import calplot
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from jinja2 import Environment, FileSystemLoader
+from nemreader.output_db import get_nmis
 from sqlite_utils import Database
 
-from nemreader.output_db import get_nmis
 from model import get_date_range, get_day_data, get_usage_df, get_years
 
 DB_PATH = Path("data/") / "nemdata.db"
@@ -129,6 +129,20 @@ def build_usage_histogram(nmi: str) -> str:
         color_continuous_scale=colorscale,
         color_continuous_midpoint=midpoint,
     )
+
+    xmin = min(df.index.date)
+    xmax = max(df.index.date)
+    y_values = [time(4, 0), time(9, 0), time(16, 0), time(21, 0)]
+    for y in y_values:
+        fig.add_shape(
+            type="line",
+            x0=xmin,
+            y0=y,
+            x1=xmax,
+            y1=y,
+            line=dict(color="black", width=1, dash="dash"),
+        )
+
     fig.update_layout(
         xaxis_title=None,
         yaxis_title=None,
@@ -161,7 +175,7 @@ def get_year_season_data(nmi: str, year: int):
     imp_values = {}
     exp_values = {}
 
-    sql = """select season, imp, exp 
+    sql = """select season, imp, exp
             from season_reads
             where nmi = :nmi and year = :year
             """
@@ -217,7 +231,15 @@ def get_year_season_data(nmi: str, year: int):
 
 def get_month_data(nmi: str):
     sql = "SELECT * from monthly_reads where nmi = :nmi"
-    return db.query(sql, {"nmi": nmi})
+    rows = []
+    for row in db.query(sql, {"nmi": nmi}):
+        month_desc = row["month"]
+        num_days = row["num_days"]
+        year, month = [int(x) for x in month_desc.split("-")]
+        _, exp_num_days = monthrange(year, month)
+        row["incomplete"] = True if num_days < exp_num_days else False
+        rows.append(row)
+    return rows
 
 
 def build_report(nmi: str):
@@ -273,6 +295,7 @@ Path("build").mkdir(exist_ok=True)
 
 env = Environment(loader=FileSystemLoader("templates"))
 env.filters["yearmonth"] = format_month
+
 
 copy_static_data()
 nmis = get_nmis(DB_PATH)

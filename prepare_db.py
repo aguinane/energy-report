@@ -4,8 +4,9 @@ from datetime import datetime
 from pathlib import Path
 from statistics import mean
 
-from nemreader import output_as_sqlite, extend_sqlite
+from nemreader import extend_sqlite, output_as_sqlite
 from nemreader.output_db import get_nmis
+
 from model import db, get_season
 
 DB_PATH = Path("data/") / "nemdata.db"
