@@ -149,6 +149,8 @@ def build_usage_histogram(nmi: str) -> str:
         legend_title="kW",
         margin=dict(l=20, r=20, t=20, b=20),
     )
+    fig.update_xaxes(dtick="M3", tickformat="%b\n%Y", ticklabelmode="period")
+    fig.update_yaxes(dtick=12)
 
     file_path = Path(f"build/{nmi}_usage_histogram.html")
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
