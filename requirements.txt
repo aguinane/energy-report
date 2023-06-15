@@ -5,3 +5,4 @@ plotly
 calplot
 sqlite_utils
 pydantic
+typer

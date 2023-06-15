@@ -2,7 +2,7 @@ import logging
 import shutil
 import webbrowser
 from calendar import monthrange
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 from pathlib import Path
 from typing import List, Optional
 
@@ -11,17 +11,23 @@ import pandas as pd
 import plotly.express as px
 from jinja2 import Environment, FileSystemLoader
 from nemreader.output_db import get_nmis
-from sqlite_utils import Database
 
-from model import get_date_range, get_day_data, get_usage_df, get_years
+from .model import DB_PATH, db, get_date_range, get_day_data, get_usage_df, get_years
+from .prepare_db import update_nem_database
 
-DB_PATH = Path("data/") / "nemdata.db"
-db = Database(DB_PATH)
 log = logging.getLogger(__name__)
+this_dir = Path(__file__).parent
+template_dir = this_dir / "templates"
+env = Environment(loader=FileSystemLoader(template_dir))
+output_dir = Path("output")
+output_dir.mkdir(exist_ok=True)
 
 
 def format_month(dt: datetime) -> str:
     return dt.strftime("%b %Y")
+
+
+env.filters["yearmonth"] = format_month
 
 
 def build_daily_usage_chart(nmi: str, kind: str) -> Optional[Path]:
@@ -60,7 +66,7 @@ def build_daily_usage_chart(nmi: str, kind: str) -> Optional[Path]:
         colorbar=True,
     )
     fig = plot[0]
-    file_path = Path(f"build/{nmi}_daily_{kind}.png")
+    file_path = output_dir / f"{nmi}_daily_{kind}.png"
     fig.savefig(file_path, bbox_inches="tight")
     log.info("Created %s", file_path)
     return file_path
@@ -100,7 +106,7 @@ def build_daily_plot(nmi: str) -> str:
             )
         ),
     )
-    file_path = Path(f"build/{nmi}_daily_plot.html")
+    file_path = output_dir / f"{nmi}_daily_plot.html"
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
     log.info("Created %s", file_path)
     return file_path
@@ -152,17 +158,19 @@ def build_usage_histogram(nmi: str) -> str:
     fig.update_xaxes(dtick="M3", tickformat="%b\n%Y", ticklabelmode="period")
     fig.update_yaxes(dtick=12)
 
-    file_path = Path(f"build/{nmi}_usage_histogram.html")
+    file_path = output_dir / f"{nmi}_usage_histogram.html"
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
     log.info("Created %s", file_path)
     return file_path
 
 
 def copy_static_data():
-    """Copy static file"""
+    """Copy static files"""
     files = []
     for file in files:
-        shutil.copy(f"templates/{file}", f"build/{file}")
+        from_loc = template_dir / file
+        to_loc = output_dir / file
+        shutil.copy(from_loc, to_loc)
 
 
 def get_seasonal_data(nmi: str):
@@ -275,7 +283,7 @@ def build_report(nmi: str):
     }
 
     output_html = template.render(nmi=nmi, **report_data)
-    file_path = f"build/{nmi}.html"
+    file_path = output_dir / f"{nmi}.html"
     with open(file_path, "w", encoding="utf-8") as fh:
         fh.write(output_html)
     logging.info("Created %s", file_path)
@@ -285,23 +293,19 @@ def build_report(nmi: str):
 def build_index(nmis: List[str]):
     template = env.get_template("index.html")
     output_html = template.render(nmis=nmis)
-    file_path = "build/index.html"
+    file_path = output_dir / "index.html"
     with open(file_path, "w", encoding="utf-8") as fh:
         fh.write(output_html)
     logging.info("Created %s", file_path)
     return file_path
 
 
-logging.basicConfig(level="INFO")
-Path("build").mkdir(exist_ok=True)
-
-env = Environment(loader=FileSystemLoader("templates"))
-env.filters["yearmonth"] = format_month
-
-
-copy_static_data()
-nmis = get_nmis(DB_PATH)
-for nmi in nmis:
-    build_report(nmi)
-fp = Path(build_index(nmis)).resolve()
-webbrowser.open(fp.as_uri())
+def build_reports():
+    if "nmi_summary" not in db.table_names():
+        update_nem_database()
+    copy_static_data()
+    nmis = get_nmis(DB_PATH)
+    for nmi in nmis:
+        build_report(nmi)
+    fp = Path(build_index(nmis)).resolve()
+    webbrowser.open(fp.as_uri())

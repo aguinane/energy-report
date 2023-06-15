@@ -7,23 +7,7 @@ from statistics import mean
 from nemreader import extend_sqlite, output_as_sqlite
 from nemreader.output_db import get_nmis
 
-from model import db, get_season
-
-DB_PATH = Path("data/") / "nemdata.db"
-
-
-def import_nem_data():
-    output_dir = Path("data/")
-    for fp in output_dir.glob("*.csv"):
-        print("Importing", fp)
-        try:
-            output_as_sqlite(
-                file_name=fp, output_dir="data/", split_days=True, set_interval=5
-            )
-        except Exception:
-            print("Failed to process", fp)
-
-    extend_sqlite(DB_PATH)
+from .model import DB_PATH, db, get_season
 
 
 def calc_seasonal_summary(nmi: str):
@@ -78,7 +62,16 @@ def update_seasonal_summaries():
     logging.info("Updated seasonal data")
 
 
-logging.basicConfig(level="INFO")
+def update_nem_database():
+    output_dir = Path("data/")
+    for fp in output_dir.glob("*.csv"):
+        print("Importing", fp)
+        try:
+            output_as_sqlite(
+                file_name=fp, output_dir="data/", split_days=True, set_interval=5
+            )
+        except Exception:
+            print("Failed to process", fp)
 
-import_nem_data()
-update_seasonal_summaries()
+    extend_sqlite(DB_PATH)
+    update_seasonal_summaries()

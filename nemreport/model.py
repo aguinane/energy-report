@@ -9,7 +9,8 @@ from nemreader.output_db import get_nmi_channels, get_nmi_readings
 from pydantic import BaseModel
 from sqlite_utils import Database
 
-DB_PATH = Path("data/") / "nemdata.db"
+data_dir = Path("data/")
+DB_PATH = data_dir / "nemdata.db"
 db = Database(DB_PATH)
 
 
@@ -19,7 +20,7 @@ class EnergyReading(BaseModel):
 
 
 def get_date_range(nmi: str) -> Tuple[datetime, datetime]:
-    sql = """select MIN(first_interval) start, MAX(last_interval) end 
+    sql = """select MIN(first_interval) start, MAX(last_interval) end
             from nmi_summary where nmi = :nmi
             """
     row = list(db.query(sql, {"nmi": nmi}))[0]
@@ -104,7 +105,8 @@ def get_usage_df(nmi: str) -> pd.DataFrame:
 def get_day_data(
     nmi: str,
 ) -> Generator[Tuple[str, float, float, float, float, float, float], None, None]:
-    sql = "select day, imp, exp, imp_morning, imp_day, imp_evening, imp_night from daily_reads where nmi = :nmi"
+    sql = "SELECT day, imp, exp, imp_morning, imp_day, imp_evening, imp_night "
+    sql += "FROM daily_reads where nmi = :nmi"
     for row in db.query(sql, {"nmi": nmi}):
         dt = datetime.strptime(row["day"], "%Y-%m-%d")
         row = (
