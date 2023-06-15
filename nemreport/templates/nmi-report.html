@@ -26,7 +26,6 @@
             <caption>Average daily usage (kWh)</caption>
             <thead class="thead-light">
                 <tr>
-                    <th>Year</th>
                     <th>☀️ Summer</th>
                     <th>🍂Autumn</th>
                     <th>❄️Winter</th>
@@ -37,18 +36,14 @@
             </thead>
 
             <tbody>
-                {% for year in season_data|sort(reverse = True) %}
-                {% set year_data = season_data[year] %}
                 <tr>
-                    <td>{{ year }}</td>
-                    <td>{% if year_data['Summer'][0] %}{{ year_data['Summer'][0] }}{% endif %}</td>
-                    <td>{% if year_data['Autumn'][0] %}{{ year_data['Autumn'][0] }}{% endif %}</td>
-                    <td>{% if year_data['Winter'][0] %}{{ year_data['Winter'][0] }}{% endif %}</td>
-                    <td>{% if year_data['Spring'][0] %}{{ year_data['Spring'][0] }}{% endif %}</td>
-                    <td>{% if year_data['Year'][0] %}{{ year_data['Year'][0] }}{% endif %}</td>
-                    <td>{% if year_data['Export'][0] %}{{ year_data['Export'][0] }}{% endif %}</td>
+                    <td>{% if 'SUMMER' in season_data %}{{ season_data['SUMMER']|round(1) }}{% endif %}</td>
+                    <td>{% if 'AUTUMN' in season_data %}{{ season_data['AUTUMN']|round(1)}}{% endif %}</td>
+                    <td>{% if 'WINTER' in season_data %}{{ season_data['WINTER']|round(1) }}{% endif %}</td>
+                    <td>{% if 'SPRING' in season_data %}{{ season_data['SPRING']|round(1) }}{% endif %}</td>
+                    <td>{{ season_data['TOTAL']|round(1) }}</td>
+                    <td>{{ season_data['EXPORT']|round(1) }}</td>
                 </tr>
-                {% endfor %}
             </tbody>
         </table>
 

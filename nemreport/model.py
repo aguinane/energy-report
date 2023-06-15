@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Generator, Tuple
 
@@ -29,57 +29,6 @@ def get_date_range(nmi: str) -> Tuple[datetime, datetime]:
     return start, end
 
 
-def get_years(nmi: str) -> Generator[int, None, None]:
-    start, end = get_date_range(nmi)
-    x = start.year
-    while x <= end.year:
-        yield x
-        x += 1
-
-
-def time_of_day(start: datetime) -> str:
-    """Get time of day period"""
-    s = start
-    if s.hour < 4:
-        return "Night"
-    if s.hour < 9:
-        return "Morning"
-    if s.hour < 16:
-        return "Day"
-    if s.hour < 21:
-        return "Evening"
-    return "Night"
-
-
-def get_fiscal_year(day: date) -> int:
-    """Get FY ending"""
-    if day.month <= 6:
-        fy = day.year
-    else:
-        fy = day.year + 1
-    return fy
-
-
-def get_season(day: date) -> str:
-    """Get season for day"""
-    if day.month in [1, 2, 12]:
-        return "A - Summer"
-    if day.month in [3, 4, 5]:
-        return "B - Autumn"
-    if day.month in [6, 7, 8]:
-        return "C - Winter"
-    return "D - Spring"
-
-
-def get_season_fy(day: date) -> str:
-    season = get_season(day)
-    if day.month == 12:
-        fyd = str(day.year + 1)
-    else:
-        fyd = str(day.year)
-    return f"{fyd} {season}"
-
-
 def get_usage_df(nmi: str) -> pd.DataFrame:
     channels = get_nmi_channels(DB_PATH, nmi)
     imp_values = defaultdict(int)
@@ -100,6 +49,12 @@ def get_usage_df(nmi: str) -> pd.DataFrame:
     ser = pd.Series(data=[-exp_values[x] for x in exp_values], index=exp_values.keys())
     df.loc[:, "export"] = ser
     return df.fillna(0)
+
+
+def get_season_data(nmi: str):
+    sql = "SELECT *"
+    sql += "FROM latest_year_seasons where nmi = :nmi"
+    return list(db.query(sql, {"nmi": nmi}))
 
 
 def get_day_data(

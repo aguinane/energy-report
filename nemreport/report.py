@@ -12,7 +12,14 @@ import plotly.express as px
 from jinja2 import Environment, FileSystemLoader
 from nemreader.output_db import get_nmis
 
-from .model import DB_PATH, db, get_date_range, get_day_data, get_usage_df, get_years
+from .model import (
+    DB_PATH,
+    db,
+    get_date_range,
+    get_day_data,
+    get_season_data,
+    get_usage_df,
+)
 from .prepare_db import update_nem_database
 
 log = logging.getLogger(__name__)
@@ -174,11 +181,23 @@ def copy_static_data():
 
 
 def get_seasonal_data(nmi: str):
-    year_data = {}
-    for year in get_years(nmi):
-        data = get_year_season_data(nmi, year)
-        year_data[year] = data
-    return year_data
+    season_data = {}
+    all_exp = 0
+    all_imp = 0
+    total_days = 0
+    for row in get_season_data(nmi):
+        season = row["Season"]
+        num_days = row["num_days"]
+        imp = row["imp"]
+        exp = row["exp"]
+        all_imp += imp
+        all_exp += exp
+        total_days += num_days
+        season_data[season] = imp / num_days
+
+    season_data["EXPORT"] = all_exp / total_days
+    season_data["TOTAL"] = all_imp / total_days
+    return season_data
 
 
 def get_year_season_data(nmi: str, year: int):
@@ -301,7 +320,7 @@ def build_index(nmis: List[str]):
 
 
 def build_reports():
-    if "nmi_summary" not in db.table_names():
+    if "daily_reads" not in db.table_names():
         update_nem_database()
     copy_static_data()
     nmis = get_nmis(DB_PATH)
