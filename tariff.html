@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+
+  <title>Tariff Comparison</title>
+
+
+  <script>
+    function calculateTotal() {
+
+      var numDays = 365;
+      var dailyPrice = parseFloat(document.getElementById('dailyPrice').value);
+      var dailyPrice2 = parseFloat(document.getElementById('dailyPrice').value);
+
+      var morningKWh = parseFloat(document.getElementById('morning').value);
+      var morningPrice = parseFloat(document.getElementById('morningPrice').value);
+      var morningPrice2 = parseFloat(document.getElementById('morningPrice2').value);
+
+      var dayKWh = parseFloat(document.getElementById('day').value);
+      var dayPrice = parseFloat(document.getElementById('dayPrice').value);
+      var dayPrice2 = parseFloat(document.getElementById('dayPrice2').value);
+
+      var eveningKWh = parseFloat(document.getElementById('evening').value);
+      var eveningPrice = parseFloat(document.getElementById('eveningPrice').value);
+      var eveningPrice2 = parseFloat(document.getElementById('eveningPrice2').value);
+
+      var nightKWh = parseFloat(document.getElementById('night').value);
+      var nightPrice = parseFloat(document.getElementById('nightPrice').value);
+      var nightPrice2 = parseFloat(document.getElementById('nightPrice2').value);
+
+      var exportKWh = parseFloat(document.getElementById('export').value);
+      var exportPrice = parseFloat(document.getElementById('exportPrice').value);
+      var exportPrice2 = parseFloat(document.getElementById('exportPrice2').value);
+
+      var dailyTotal = numDays * dailyPrice;
+      var morningTotal = morningKWh * morningPrice;
+      var dayTotal = dayKWh * dayPrice;
+      var eveningTotal = eveningKWh * eveningPrice;
+      var nightTotal = nightKWh * nightPrice;
+      var exportTotal = exportKWh * exportPrice;
+
+      var dailyTotal2 = numDays * dailyPrice2;
+      var morningTotal2 = morningKWh * morningPrice2;
+      var dayTotal2 = dayKWh * dayPrice2;
+      var eveningTotal2 = eveningKWh * eveningPrice2;
+      var nightTotal2 = nightKWh * nightPrice2;
+      var exportTotal2 = exportKWh * exportPrice2;
+
+      var total = dailyTotal + morningTotal + dayTotal + eveningTotal + nightTotal - exportTotal;
+      var total2 = dailyTotal2 + morningTotal2 + dayTotal2 + eveningTotal2 + nightTotal2 - exportTotal2;
+      var abdiff = total2 - total;
+
+      document.getElementById('total').innerHTML = total.toFixed(0);
+      document.getElementById('total2').innerHTML = total2.toFixed(0);
+      document.getElementById('abdiff').innerHTML = abdiff.toFixed(0);
+    }
+  </script>
+</head>
+
+<body>
+  <h1>Calculate Total Energy Cost</h1>
+
+  <form>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Annual Usage (kWh)</th>
+          <th>Tariff A</th>
+          <th>Tariff B</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>Daily Charge</th>
+          <td>365 days</td>
+          <td><input type="number" id="dailyPrice" min="0" step="0.01" value="1.33" size="5" required></td>
+          <td><input type="number" id="dailyPrice2" min="0" step="0.01" value="1.33" size="5" required></td>
+        </tr>
+
+        <tr>
+          <th>Morning</th>
+          <td><input type="number" id="morning" min="0" step="1" value="943" size="5" required></td>
+          <td><input type="number" id="morningPrice" min="0" step="0.01" value="0.33" size="5" required></td>
+          <td><input type="number" id="morningPrice2" min="0" step="0.01" value="0.33" size="5" required></td>
+        </tr>
+        <tr>
+          <th>Day</th>
+          <td><input type="number" id="day" min="0" step="1" value="802" size="5" required></td>
+          <td><input type="number" id="dayPrice" min="0" step="0.01" value="0.33" size="5" required></td>
+          <td><input type="number" id="dayPrice2" min="0" step="0.01" value="0.16" size="5" required></td>
+        </tr>
+        <tr>
+          <th>Evening</th>
+          <td><input type="number" id="evening" min="0" step="1" value="802" size="5" required></td>
+          <td><input type="number" id="eveningPrice" min="0" step="0.01" value="0.33" size="5" required></td>
+          <td><input type="number" id="eveningPrice2" min="0" step="0.01" value="0.33" size="5" required></td>
+        </tr>
+        <tr>
+          <th>Night</th>
+          <td><input type="number" id="night" min="0" step="1" value="802" size="5" required></td>
+          <td><input type="number" id="nightPrice" min="0" step="0.01" value="0.33" size="5" required></td>
+          <td><input type="number" id="nightPrice2" min="0" step="0.01" value="0.33" size="5" required></td>
+        </tr>
+        <tr>
+          <th>Export</th>
+          <td><input type="number" id="export" min="0" step="1" value="802" size="5" required></td>
+          <td><input type="number" id="exportPrice" min="0" step="0.01" value="0.09" size="5" required></td>
+          <td><input type="number" id="exportPrice2" min="0" step="0.01" value="0.09" size="5" required></td>
+        </tr>
+        <tr>
+          <th>Total</th>
+          <td></td>
+          <td>$<span id="total"></span></td>
+          <td>$<span id="total2"></span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Tariff B is $<span id="abdiff"></span> cheaper then Tariff A.
+    </p>
+    <button type="button" onclick="calculateTotal()">Calculate</button>
+  </form>
+
+
+
+</body>
+
+</html>
