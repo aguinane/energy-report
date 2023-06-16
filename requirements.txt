@@ -1,8 +1,0 @@
-nemreader>=v0.8.7
-jinja2
-pandas
-plotly
-calplot
-sqlite_utils
-pydantic
-typer
