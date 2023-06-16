@@ -19,6 +19,7 @@ from .model import (
     get_day_data,
     get_season_data,
     get_usage_df,
+    get_annual_data,
 )
 from .prepare_db import update_nem_database
 
@@ -200,64 +201,6 @@ def get_seasonal_data(nmi: str):
     return season_data
 
 
-def get_year_season_data(nmi: str, year: int):
-    imp_values = {}
-    exp_values = {}
-
-    sql = """select season, imp, exp
-            from season_reads
-            where nmi = :nmi and year = :year
-            """
-    for r in db.query(sql, {"nmi": nmi, "year": year}):
-        season = r["season"]
-        imp = r["imp"]
-        exp = r["exp"]
-        imp_values[season] = imp
-        exp_values[season] = exp
-
-    a_days = 90
-    a_avg = imp_values.get("A - Summer", None)
-    a_sum = a_avg * a_days if a_avg else None
-
-    b_days = 92
-    b_avg = imp_values.get("B - Autumn", None)
-    b_sum = b_avg * b_days if b_avg else None
-
-    c_days = 92
-    c_avg = imp_values.get("C - Winter", None)
-    c_sum = c_avg * c_days if c_avg else None
-
-    d_days = 91
-    d_avg = imp_values.get("D - Spring", None)
-    d_sum = d_avg * d_days if d_avg else None
-
-    yr_sum = 0
-    yr_days = 0
-    if a_sum is not None:
-        yr_sum += a_sum
-        yr_days += a_days
-    if b_sum is not None:
-        yr_sum += b_sum
-        yr_days += b_days
-    if c_sum is not None:
-        yr_sum += c_sum
-        yr_days += c_days
-    if d_sum is not None:
-        yr_sum += d_sum
-        yr_days += d_days
-    yr_avg = round(yr_sum / yr_days, 3)
-
-    summary = {
-        "Summer": (a_avg, a_sum),
-        "Autumn": (b_avg, b_sum),
-        "Winter": (c_avg, c_sum),
-        "Spring": (d_avg, d_sum),
-        "Export": (d_avg, d_sum),
-        "Year": (yr_avg, yr_sum),
-    }
-    return summary
-
-
 def get_month_data(nmi: str):
     sql = "SELECT * from monthly_reads where nmi = :nmi"
     rows = []
@@ -298,6 +241,7 @@ def build_report(nmi: str):
         "imp_overview_chart": fp_imp.name,
         "exp_overview_chart": fp_exp.name if has_export else None,
         "season_data": get_seasonal_data(nmi),
+        "annual_data": get_annual_data(nmi),
         "month_data": get_month_data(nmi),
     }
 

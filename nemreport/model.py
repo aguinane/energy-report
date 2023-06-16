@@ -57,6 +57,12 @@ def get_season_data(nmi: str):
     return list(db.query(sql, {"nmi": nmi}))
 
 
+def get_annual_data(nmi: str):
+    sql = "SELECT *"
+    sql += "FROM latest_year where nmi = :nmi"
+    return list(db.query(sql, {"nmi": nmi}))[0]
+
+
 def get_day_data(
     nmi: str,
 ) -> Generator[Tuple[str, float, float, float, float, float, float], None, None]:
