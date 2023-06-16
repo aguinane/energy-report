@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlite_utils import Database
 
 data_dir = Path("data/")
+data_dir.mkdir(exist_ok=True)
 DB_PATH = data_dir / "nemdata.db"
 db = Database(DB_PATH)
 
