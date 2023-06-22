@@ -81,3 +81,62 @@ def get_day_data(
             row["imp_night"],
         )
         yield row
+
+
+def get_day_profile(nmi: str):
+    db.create_view(
+        "combined_readings",
+        """
+    SELECT nmi, t_start, t_end, SUM(CASE WHEN substr(channel,1,1) = 'B' THEN -1 * value ELSE value END) as value
+    FROM readings
+    GROUP BY nmi, t_start, t_end
+    ORDER BY 1, 2
+    """,
+        replace=True,
+    )
+    sql = """
+    WITH reads AS (
+    SELECT
+        strftime('%H:%M', cr.t_start) AS time,
+        cr.nmi, cr.t_start, cr.t_end, cr.value
+    FROM combined_readings cr
+    LEFT JOIN (SELECT NMI, MAX(last_interval) as last_interval FROM nmi_summary
+    GROUP BY NMI) li ON li.nmi = cr.nmi
+    WHERE cr.t_start >= DATETIME(li.last_interval, '-366 days')
+    AND cr.nmi = :nmi
+    )
+    SELECT time, AVG(value)*12 as value
+    FROM reads
+    GROUP BY time
+    """
+    rows = list(db.query(sql, {"nmi": nmi}))
+    data = {
+        "time": [x["time"] for x in rows],
+        "Avg kW": [x["value"] for x in rows],
+    }
+    for season in ["SUMMER", "AUTUMN", "WINTER", "SPRING"]:
+        sql = """
+        WITH reads AS (
+        SELECT
+            (CASE WHEN CAST(strftime('%m', cr.t_start) AS INTEGER) < 3 THEN 'SUMMER'
+            ELSE (CASE WHEN CAST(strftime('%m', cr.t_start) AS INTEGER) < 6 THEN 'AUTUMN'
+            ELSE (CASE WHEN CAST(strftime('%m', cr.t_start) AS INTEGER) < 9 THEN 'WINTER'
+            ELSE (CASE WHEN CAST(strftime('%m', cr.t_start) AS INTEGER) < 12 THEN 'SPRING'
+            ELSE 'SUMMER' END) END) END) END) season,
+            strftime('%H:%M', cr.t_start) AS time,
+            cr.nmi, cr.t_start, cr.t_end, cr.value
+        FROM combined_readings cr
+        LEFT JOIN (SELECT NMI, MAX(last_interval) as last_interval FROM nmi_summary
+        GROUP BY NMI) li ON li.nmi = cr.nmi
+        WHERE cr.t_start >= DATETIME(li.last_interval, '-366 days')
+        AND cr.nmi = :nmi
+        )
+        SELECT time, AVG(value)*12 as value
+        FROM reads
+        WHERE season = :season
+        GROUP BY time
+        """
+        rows = list(db.query(sql, {"nmi": nmi, "season": season}))
+        data[season] = [x["value"] for x in rows]
+    df = pd.DataFrame(data=data)
+    return df

@@ -9,6 +9,7 @@ from typing import List, Optional
 import calplot
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from jinja2 import Environment, FileSystemLoader
 from nemreader.output_db import get_nmis
 
@@ -18,6 +19,7 @@ from .model import (
     get_annual_data,
     get_date_range,
     get_day_data,
+    get_day_profile,
     get_season_data,
     get_usage_df,
 )
@@ -76,6 +78,21 @@ def build_daily_usage_chart(nmi: str, kind: str) -> Optional[Path]:
     fig = plot[0]
     file_path = output_dir / f"{nmi}_daily_{kind}.png"
     fig.savefig(file_path, bbox_inches="tight")
+    log.info("Created %s", file_path)
+    return file_path
+
+
+def build_day_profile_plot(nmi: str) -> str:
+    """Save profile plot"""
+    df = get_day_profile(nmi)
+    # trace = go.Scatter(x=df["time"], y=df["Avg kW"], name="Avg kW")
+    traces = []
+    for season in ["SUMMER", "AUTUMN", "WINTER", "SPRING"]:
+        trace = go.Scatter(x=df["time"], y=df[season], name=season)
+        traces.append(trace)
+    fig = go.Figure(data=traces)
+    file_path = output_dir / f"{nmi}_day_profile.html"
+    fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
     log.info("Created %s", file_path)
     return file_path
 
@@ -219,6 +236,7 @@ def build_report(nmi: str):
     start, end = get_date_range(nmi)
     fp_imp = build_daily_usage_chart(nmi, "import")
     fp_exp = build_daily_usage_chart(nmi, "export")
+    fp_profile = build_day_profile_plot(nmi)
     build_daily_usage_chart(nmi, "total")
     has_export = True if fp_exp else None
 
