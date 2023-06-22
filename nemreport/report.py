@@ -87,10 +87,27 @@ def build_day_profile_plot(nmi: str) -> str:
     df = get_day_profile(nmi)
     # trace = go.Scatter(x=df["time"], y=df["Avg kW"], name="Avg kW")
     traces = []
+    color_dict = {
+        "SUMMER": "red",
+        "AUTUMN": "green",
+        "WINTER": "blue",
+        "SPRING": "purple",
+    }
     for season in ["SUMMER", "AUTUMN", "WINTER", "SPRING"]:
-        trace = go.Scatter(x=df["time"], y=df[season], name=season)
+        color = color_dict[season]
+        trace = go.Scatter(
+            x=df["time"], y=df[season], name=season, marker=dict(color=color)
+        )
         traces.append(trace)
     fig = go.Figure(data=traces)
+    x_values = ["04:00", "09:00", "16:00", "21:00"]
+    for x in x_values:
+        fig.add_vline(x=x, line_width=1, line_dash="dash", line_color="black")
+    fig.update_layout(
+        legend=dict(orientation="h", yanchor="top", y=1.02, xanchor="right", x=1)
+    )
+    fig.update_xaxes(dtick=6)
+
     file_path = output_dir / f"{nmi}_day_profile.html"
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
     log.info("Created %s", file_path)
@@ -236,26 +253,29 @@ def build_report(nmi: str):
     start, end = get_date_range(nmi)
     fp_imp = build_daily_usage_chart(nmi, "import")
     fp_exp = build_daily_usage_chart(nmi, "export")
-    fp_profile = build_day_profile_plot(nmi)
+
     build_daily_usage_chart(nmi, "total")
     has_export = True if fp_exp else None
 
-    """
     ch_daily_fp = build_daily_plot(nmi)
     with open(ch_daily_fp, "r") as fh:
         daily_chart = fh.read()
-    """
 
     ch_tou_fp = build_usage_histogram(nmi)
     with open(ch_tou_fp, "r") as fh:
         tou_chart = fh.read()
 
+    profile_fp = build_day_profile_plot(nmi)
+    with open(profile_fp, "r") as fh:
+        profile_chart = fh.read()
+
     report_data = {
         "start": start,
         "end": end,
         "has_export": has_export,
-        "daily_chart": "",
+        "daily_chart": daily_chart,
         "tou_chart": tou_chart,
+        "profile_chart": profile_chart,
         "imp_overview_chart": fp_imp.name,
         "exp_overview_chart": fp_exp.name if has_export else None,
         "season_data": get_seasonal_data(nmi),
