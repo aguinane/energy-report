@@ -20,7 +20,7 @@ keywords = ["energy", "NEM12", "NEM13"]
 requires-python = ">=3.8"
 dynamic = ["version", "description"]
 dependencies = [
-    "nemreader>=v0.8.7",
+    "nemreader>=0.8.7",
     "jinja2",
     "pandas",
     "plotly",
@@ -38,7 +38,7 @@ dev = ["black", "flake8", "flake8-bugbear", "pep8-naming", "flake8-builtins"]
 Source = "https://github.com/aguinane/energy-report"
 
 [project.scripts]
-nemreader = "nemreport.cli:app"
+nemreport = "nemreport.cli:app"
 
 [tool.isort]
 profile = "black"

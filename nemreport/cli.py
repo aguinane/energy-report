@@ -35,9 +35,11 @@ def callback(
 
 @app.command()
 def update_db() -> None:
-    update_nem_database()
+    fp = update_nem_database()
+    typer.echo(f"Updated {fp}")
 
 
 @app.command()
 def build() -> None:
-    build_reports()
+    fp = build_reports()
+    typer.echo(f"Created {fp}")

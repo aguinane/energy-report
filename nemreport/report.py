@@ -15,11 +15,11 @@ from nemreader.output_db import get_nmis
 from .model import (
     DB_PATH,
     db,
+    get_annual_data,
     get_date_range,
     get_day_data,
     get_season_data,
     get_usage_df,
-    get_annual_data,
 )
 from .prepare_db import update_nem_database
 
@@ -272,3 +272,4 @@ def build_reports():
         build_report(nmi)
     fp = Path(build_index(nmis)).resolve()
     webbrowser.open(fp.as_uri())
+    return fp
