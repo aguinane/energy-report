@@ -47,19 +47,19 @@ def build_daily_usage_chart(nmi: str, kind: str) -> Optional[Path]:
     data = []
     for dt, imp, exp, _, _, _, _ in get_day_data(nmi):
         days.append(dt)
-        exp = -exp  # Make export negative
         if kind == "import":
             data.append(imp)
         elif kind == "export":
             data.append(exp)
         elif kind == "total":
+            exp = -exp  # Make export negative
             val = imp + exp
             data.append(val)
         else:
             raise ValueError("Invalid usage chart kind")
 
     if kind == "export":
-        if min(data) == 0.0:
+        if max(data) == 0.0:
             return None
 
     vmin = max(-35, min(data))
