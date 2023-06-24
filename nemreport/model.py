@@ -140,3 +140,30 @@ def get_day_profile(nmi: str):
         data[season] = [x["value"] for x in rows]
     df = pd.DataFrame(data=data)
     return df
+
+
+def get_day_profiles(nmi: str):
+    sql = """
+WITH reads AS (
+    SELECT
+		strftime('%Y-%m-%d', cr.t_start) AS day,
+        strftime('%H:%M', cr.t_start) AS time,
+        cr.nmi, cr.t_start, cr.t_end, cr.value
+    FROM combined_readings cr
+    LEFT JOIN (SELECT NMI, MAX(last_interval) as last_interval FROM nmi_summary
+    GROUP BY NMI) li ON li.nmi = cr.nmi
+    WHERE cr.t_start >= DATETIME(li.last_interval, '-366 days')
+    AND cr.nmi = :nmi
+    )
+    SELECT day, time, AVG(value)*12 as value
+    FROM reads
+    GROUP BY day, time
+    """
+    rows = list(db.query(sql, {"nmi": nmi}))
+    data = {
+        "day": [x["day"] for x in rows],
+        "time": [x["time"] for x in rows],
+        "Avg kW": [x["value"] for x in rows],
+    }
+    df = pd.DataFrame(data=data)
+    return df

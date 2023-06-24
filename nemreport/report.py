@@ -20,6 +20,7 @@ from .model import (
     get_date_range,
     get_day_data,
     get_day_profile,
+    get_day_profiles,
     get_season_data,
     get_usage_df,
 )
@@ -106,9 +107,34 @@ def build_day_profile_plot(nmi: str) -> str:
     fig.update_layout(
         legend=dict(orientation="h", yanchor="top", y=1.02, xanchor="right", x=1)
     )
-    fig.update_xaxes(dtick=6)
+    fig.update_xaxes(dtick=12)
 
     file_path = output_dir / f"{nmi}_day_profile.html"
+    fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
+    log.info("Created %s", file_path)
+    return file_path
+
+
+def build_histogram_plot(nmi: str) -> str:
+    """Save profile plot"""
+    df = get_day_profiles(nmi)
+    fig = px.histogram(df, x="Avg kW", log_y=True)
+    file_path = output_dir / f"{nmi}_histogram.html"
+    fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
+    log.info("Created %s", file_path)
+    return file_path
+
+
+def build_days_profiles_plot(nmi: str) -> str:
+    """Save profile plot"""
+    df = get_day_profiles(nmi)
+    fig = px.line(df, x="time", y="Avg kW", color="day")
+    x_values = ["04:00", "09:00", "16:00", "21:00"]
+    for x in x_values:
+        fig.add_vline(x=x, line_width=1, line_dash="dash", line_color="black")
+    fig.update_xaxes(dtick=12)
+    fig.update_traces(line_color="royalblue", showlegend=False)
+    file_path = output_dir / f"{nmi}_days_profiles.html"
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
     log.info("Created %s", file_path)
     return file_path
@@ -269,6 +295,14 @@ def build_report(nmi: str):
     with open(profile_fp, "r") as fh:
         profile_chart = fh.read()
 
+    profiles_fp = build_days_profiles_plot(nmi)
+    with open(profiles_fp, "r") as fh:
+        profiles_chart = fh.read()
+
+    histogram_fp = build_histogram_plot(nmi)
+    with open(histogram_fp, "r") as fh:
+        histogram_chart = fh.read()
+
     report_data = {
         "start": start,
         "end": end,
@@ -276,6 +310,8 @@ def build_report(nmi: str):
         "daily_chart": daily_chart,
         "tou_chart": tou_chart,
         "profile_chart": profile_chart,
+        "profiles_chart": profiles_chart,
+        "histogram_chart": histogram_chart,
         "imp_overview_chart": fp_imp.name,
         "exp_overview_chart": fp_exp.name if has_export else None,
         "season_data": get_seasonal_data(nmi),
