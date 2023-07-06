@@ -11,6 +11,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from jinja2 import Environment, FileSystemLoader
+from nemreader import extend_sqlite
 from nemreader.output_db import get_nmis
 
 from .model import (
@@ -45,7 +46,11 @@ def build_daily_usage_chart(nmi: str, kind: str) -> Optional[Path]:
     """Save calendar plot"""
     days = []
     data = []
-    for dt, imp, exp, _, _, _, _ in get_day_data(nmi):
+    for (
+        dt,
+        imp,
+        exp,
+    ) in get_day_data(nmi):
         days.append(dt)
         if kind == "import":
             data.append(imp)
@@ -149,20 +154,14 @@ def build_daily_plot(nmi: str) -> str:
 
     day_data = list(get_day_data(nmi))
     data = {
-        "morning": [x[3] for x in day_data],
-        "day": [x[4] for x in day_data],
-        "evening": [x[5] for x in day_data],
-        "night": [x[6] for x in day_data],
+        "import": [x[1] for x in day_data],
         "export": [-x[2] for x in day_data],
     }
     index = [x[0] for x in day_data]
     df = pd.DataFrame(index=index, data=data)
     color_dict = {
         "export": "green",
-        "morning": "tan",
-        "day": "skyblue",
-        "evening": "orangered",
-        "night": "slategrey",
+        "import": "orangered",
     }
     fig = px.bar(df, x=df.index, y=list(data.keys()), color_discrete_map=color_dict)
     fig.update_xaxes(
@@ -177,6 +176,10 @@ def build_daily_plot(nmi: str) -> str:
                 ]
             )
         ),
+    )
+    fig.update_layout(
+        xaxis_title=None,
+        yaxis_title="kWh",
     )
     file_path = output_dir / f"{nmi}_daily_plot.html"
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
@@ -347,6 +350,7 @@ def build_index(nmis: List[str]):
 def build_reports():
     if "daily_reads" not in db.table_names():
         update_nem_database()
+    extend_sqlite(DB_PATH)
     copy_static_data()
     nmis = get_nmis(DB_PATH)
     for nmi in nmis:

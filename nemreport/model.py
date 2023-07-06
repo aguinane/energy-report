@@ -66,19 +66,15 @@ def get_annual_data(nmi: str):
 
 def get_day_data(
     nmi: str,
-) -> Generator[Tuple[str, float, float, float, float, float, float], None, None]:
-    sql = "SELECT day, imp, exp, imp_morning, imp_day, imp_evening, imp_night "
-    sql += "FROM daily_reads where nmi = :nmi"
+) -> Generator[Tuple[str, float, float], None, None]:
+    sql = "SELECT day, imp, exp "
+    sql += "FROM daily_reads WHERE nmi = :nmi"
     for row in db.query(sql, {"nmi": nmi}):
         dt = datetime.strptime(row["day"], "%Y-%m-%d")
         row = (
             dt,
             row["imp"],
             row["exp"],
-            row["imp_morning"],
-            row["imp_day"],
-            row["imp_evening"],
-            row["imp_night"],
         )
         yield row
 
