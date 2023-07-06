@@ -85,7 +85,10 @@ def build_daily_usage_chart(nmi: str, kind: str) -> Optional[Path]:
 
 def build_day_profile_plot(nmi: str) -> str:
     """Save profile plot"""
-    df = get_day_profile(nmi)
+    try:
+        df = get_day_profile(nmi)
+    except ValueError:
+        return ""
     # trace = go.Scatter(x=df["time"], y=df["Avg kW"], name="Avg kW")
     traces = []
     color_dict = {
@@ -95,11 +98,12 @@ def build_day_profile_plot(nmi: str) -> str:
         "SPRING": "purple",
     }
     for season in ["SUMMER", "AUTUMN", "WINTER", "SPRING"]:
-        color = color_dict[season]
-        trace = go.Scatter(
-            x=df["time"], y=df[season], name=season, marker=dict(color=color)
-        )
-        traces.append(trace)
+        if season in df:
+            color = color_dict[season]
+            trace = go.Scatter(
+                x=df["time"], y=df[season], name=season, marker=dict(color=color)
+            )
+            traces.append(trace)
     fig = go.Figure(data=traces)
     x_values = ["04:00", "09:00", "16:00", "21:00"]
     for x in x_values:
@@ -292,8 +296,11 @@ def build_report(nmi: str):
         tou_chart = fh.read()
 
     profile_fp = build_day_profile_plot(nmi)
-    with open(profile_fp, "r") as fh:
-        profile_chart = fh.read()
+    if profile_fp:
+        with open(profile_fp, "r") as fh:
+            profile_chart = fh.read()
+    else:
+        profile_chart = ""
 
     profiles_fp = build_days_profiles_plot(nmi)
     with open(profiles_fp, "r") as fh:
