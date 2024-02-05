@@ -60,95 +60,7 @@
                     Made Easy</a> website.</small></p>
 
 
-
-
-        <form>
-            <table>
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>Historical Usage (kWh)</th>
-                        <th>Forecast Usage (kWh)</th>
-                        <th>Tariff A</th>
-                        <th>Tariff B</th>
-                    </tr>
-                </thead>
-                <tbody>
-
-                    <tr>
-                        <th>Daily Charge</th>
-                        <td>{{ annual_data.num_days }} days</td>
-                        <td>365 days</td>
-                        <td><input type="number" id="dailyPrice" value="1.205" size="5" required>
-                        </td>
-                        <td><input type="number" id="dailyPrice2" value="1.185" size="5" required>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <th><abbr title="04:00-09:00">Morning</abbr></th>
-                        <td>{{ annual_data.imp_morning|round(1)}}</td>
-                        <td><input type="number" id="morning" min="0" step="1" value="{{ annual_data.imp_morning|int}}"
-                                size="5" required></td>
-                        <td><input type="number" id="morningPrice" value="0.332" size="5" required>
-                        </td>
-                        <td><input type="number" id="morningPrice2" value="0.204" size="5" required>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th><abbr title="09:00-16:00">Day</abbr></th>
-                        <td>{{ annual_data.imp_day|round(1)}}</td>
-                        <td><input type="number" id="day" min="0" step="1" value="{{ annual_data.imp_day|int}}" size="5"
-                                required></td>
-                        <td><input type="number" id="dayPrice" value="0.332" size="5" required></td>
-                        <td><input type="number" id="dayPrice2" value="0.109" size="5" required></td>
-                    </tr>
-                    <tr>
-                        <th><abbr title="16:00-21:00">Evening</abbr></th>
-                        <td>{{ annual_data.imp_evening|round(1)}}</td>
-                        <td><input type="number" id="evening" min="0" step="1" value="{{ annual_data.imp_evening|int}}"
-                                size="5" required></td>
-                        <td><input type="number" id="eveningPrice" value="0.332" size="5" required></td>
-                        <td><input type="number" id="eveningPrice2" value="0.609" size="5" required></td>
-                    </tr>
-                    <tr>
-                        <th><abbr title="00:00-04:00 and 21:00-00:00">Night</abbr></th>
-                        <td>{{ annual_data.imp_night|round(1)}}</td>
-                        <td><input type="number" id="night" min="0" step="1" value="{{ annual_data.imp_night|int}}"
-                                size="5" required></td>
-                        <td><input type="number" id="nightPrice" value="0.332" size="5" required> </td>
-                        <td><input type="number" id="nightPrice2" value="0.204" size="5" required> </td>
-                    </tr>
-                    <tr>
-                        <th>Export</th>
-                        <td>{{ annual_data.exp|round(1)}}</td>
-                        <td><input type="number" id="export" min="0" step="1" value="{{ annual_data.exp|int}}" size="5"
-                                required></td>
-                        <td><input type="number" id="exportPrice" value="0.13441" size="5" required>
-                        </td>
-                        <td><input type="number" id="exportPrice2" value="0.13441" size="5" required> </td>
-                    </tr>
-                    <tr>
-                        <th>Total</th>
-                        <td></td>
-                        <td></td>
-                        <td>$<span id="total"></span></td>
-                        <td>$<span id="total2"></span>
-                            <em>($<span id="abdiff"></span>)</em>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <button type="button" onclick="calculateTotal()">Calculate</button>
-
-        </form>
-
-
-
-
-
-
+        
         <h2>Monthly Usage</h2>
 
         <table class="table table-sm table-striped">
@@ -185,9 +97,18 @@
 
         <h2>More Charts</h2>
 
-        {{profile_chart}}
+        
+        <figure>
+            {{profile_chart}}
+            <figcaption>Average Daily Profile (last 12 mth)</figcaption>
+          </figure>
 
-        {{profiles_chart}}
+        
+          <figure>
+            {{profiles_chart}}
+            <figcaption>All Daily Profiles (last 12 mth)</figcaption>
+          </figure>          
+
 
         <img src="{{imp_overview_chart}}" class="img-fluid">
 
@@ -195,63 +116,27 @@
         <img src="{{exp_overview_chart}}" class="img-fluid">
         {% endif %}
 
-        {{daily_chart}}
 
-        {{histogram_chart}}
+        <figure>
+            {{daily_chart}}
+            <figcaption>Daily Totals</figcaption>
+          </figure>
+          
+        
+          <figure>
+            {{histogram_chart}}
+            <figcaption>Demand Profile (last 12 mth)</figcaption>
+          </figure>  
+
+        
+        {% if not static_mode %}  
+        <h2>Tariff Calculator</h2>
+
+        {% include 'tariff-calculator.html' %}
+        {% endif %}
+
+
     </div><!-- Container -->
-
-
-    <script>
-        function calculateTotal() {
-
-            var numDays = 365;
-            var dailyPrice = parseFloat(document.getElementById('dailyPrice').value);
-            var dailyPrice2 = parseFloat(document.getElementById('dailyPrice2').value);
-
-            var morningKWh = parseFloat(document.getElementById('morning').value);
-            var morningPrice = parseFloat(document.getElementById('morningPrice').value);
-            var morningPrice2 = parseFloat(document.getElementById('morningPrice2').value);
-
-            var dayKWh = parseFloat(document.getElementById('day').value);
-            var dayPrice = parseFloat(document.getElementById('dayPrice').value);
-            var dayPrice2 = parseFloat(document.getElementById('dayPrice2').value);
-
-            var eveningKWh = parseFloat(document.getElementById('evening').value);
-            var eveningPrice = parseFloat(document.getElementById('eveningPrice').value);
-            var eveningPrice2 = parseFloat(document.getElementById('eveningPrice2').value);
-
-            var nightKWh = parseFloat(document.getElementById('night').value);
-            var nightPrice = parseFloat(document.getElementById('nightPrice').value);
-            var nightPrice2 = parseFloat(document.getElementById('nightPrice2').value);
-
-            var exportKWh = parseFloat(document.getElementById('export').value);
-            var exportPrice = parseFloat(document.getElementById('exportPrice').value);
-            var exportPrice2 = parseFloat(document.getElementById('exportPrice2').value);
-
-            var dailyTotal = numDays * dailyPrice;
-            var morningTotal = morningKWh * morningPrice;
-            var dayTotal = dayKWh * dayPrice;
-            var eveningTotal = eveningKWh * eveningPrice;
-            var nightTotal = nightKWh * nightPrice;
-            var exportTotal = exportKWh * exportPrice;
-
-            var dailyTotal2 = numDays * dailyPrice2;
-            var morningTotal2 = morningKWh * morningPrice2;
-            var dayTotal2 = dayKWh * dayPrice2;
-            var eveningTotal2 = eveningKWh * eveningPrice2;
-            var nightTotal2 = nightKWh * nightPrice2;
-            var exportTotal2 = exportKWh * exportPrice2;
-
-            var total = dailyTotal + morningTotal + dayTotal + eveningTotal + nightTotal - exportTotal;
-            var total2 = dailyTotal2 + morningTotal2 + dayTotal2 + eveningTotal2 + nightTotal2 - exportTotal2;
-            var abdiff = total2 - total;
-
-            document.getElementById('total').innerHTML = total.toFixed(0);
-            document.getElementById('total2').innerHTML = total2.toFixed(0);
-            document.getElementById('abdiff').innerHTML = abdiff.toFixed(0);
-        }
-    </script>
-
 
 </body>
 

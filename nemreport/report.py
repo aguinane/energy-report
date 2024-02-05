@@ -6,6 +6,7 @@ from datetime import datetime, time
 from pathlib import Path
 from typing import List, Optional
 
+
 import calplot
 import pandas as pd
 import plotly.express as px
@@ -88,8 +89,7 @@ def build_daily_usage_chart(nmi: str, kind: str) -> Optional[Path]:
     return file_path
 
 
-def build_day_profile_plot(nmi: str) -> str:
-    """Save profile plot"""
+def average_daily_profiles_fig(nmi: str) -> go.Figure:
     try:
         df = get_day_profile(nmi)
     except ValueError:
@@ -117,17 +117,27 @@ def build_day_profile_plot(nmi: str) -> str:
         legend=dict(orientation="h", yanchor="top", y=1.02, xanchor="right", x=1)
     )
     fig.update_xaxes(dtick=12)
+    return fig
 
+def build_day_profile_plot(nmi: str) -> str:
+    """Save profile plot"""
+  
+    fig = average_daily_profiles_fig(nmi)
     file_path = output_dir / f"{nmi}_day_profile.html"
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
     log.info("Created %s", file_path)
     return file_path
 
 
-def build_histogram_plot(nmi: str) -> str:
-    """Save profile plot"""
+def usage_histogram(nmi: str) -> go.Figure:
     df = get_day_profiles(nmi)
     fig = px.histogram(df, x="Avg kW", log_y=True)
+    return fig
+
+
+def build_histogram_plot(nmi: str) -> str:
+    """Save profile plot"""
+    fig = usage_histogram(nmi)
     file_path = output_dir / f"{nmi}_histogram.html"
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
     log.info("Created %s", file_path)
@@ -149,9 +159,7 @@ def build_days_profiles_plot(nmi: str) -> str:
     return file_path
 
 
-def build_daily_plot(nmi: str) -> str:
-    """Save calendar plot"""
-
+def daily_total_fig(nmi: str) -> go.Figure:
     day_data = list(get_day_data(nmi))
     data = {
         "import": [x[1] for x in day_data],
@@ -181,14 +189,22 @@ def build_daily_plot(nmi: str) -> str:
         xaxis_title=None,
         yaxis_title="kWh",
     )
-    file_path = output_dir / f"{nmi}_daily_plot.html"
+    return fig
+
+
+
+def build_daily_plot(nmi: str) -> str:
+    """Save daily totals plot"""
+
+    fig = daily_total_fig(nmi)
+    file_path = output_dir / f"{nmi}_daily_totals.html"
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
     log.info("Created %s", file_path)
     return file_path
 
 
-def build_usage_histogram(nmi: str) -> str:
-    """Save heatmap of power usage"""
+def usage_heatmap(nmi: str) -> go.Figure:
+
     df = get_usage_df(nmi)
     df["power"] = df["consumption"] + df["export"]
     df["power"] = df["power"].apply(lambda x: x * 12)
@@ -197,12 +213,16 @@ def build_usage_histogram(nmi: str) -> str:
     midpoint = 0.0 if has_export else None
     start, end = get_date_range(nmi)
     numdays = (end - start).days
-    nbinsx = numdays
-    nbinsy = 96
+    nbinsx = 96
+    nbinsy = numdays
+    width = 800
+    height = 200 + int(numdays * 0.5)
     fig = px.density_heatmap(
         df,
-        x=df.index.date,
-        y=df.index.time,
+        width=width,
+        height=height,
+        x=df.index.time,
+        y=df.index.date,
         z=df["power"],
         nbinsx=nbinsx,
         nbinsy=nbinsy,
@@ -211,16 +231,16 @@ def build_usage_histogram(nmi: str) -> str:
         color_continuous_midpoint=midpoint,
     )
 
-    xmin = min(df.index.date)
-    xmax = max(df.index.date)
-    y_values = [time(4, 0), time(9, 0), time(16, 0), time(21, 0)]
-    for y in y_values:
+    datemin = min(df.index.date)
+    datemax = max(df.index.date)
+    x_values = [time(4, 0), time(9, 0), time(16, 0), time(21, 0)]
+    for x in x_values:
         fig.add_shape(
             type="line",
-            x0=xmin,
-            y0=y,
-            x1=xmax,
-            y1=y,
+            x0=x,
+            y0=datemin,
+            x1=x,
+            y1=datemax,
             line=dict(color="black", width=1, dash="dash"),
         )
 
@@ -230,10 +250,15 @@ def build_usage_histogram(nmi: str) -> str:
         margin=dict(l=20, r=20, t=20, b=20),
     )
     fig.update_layout(coloraxis=dict(colorbar=dict(title="kW")))
-    fig.update_xaxes(dtick="M3", tickformat="%b\n%Y", ticklabelmode="period")
-    fig.update_yaxes(dtick=12)
+    fig.update_yaxes(dtick="M1", tickformat="%b\n%Y", ticklabelmode="period")
+    fig.update_xaxes(dtick=12, tickformat="%H:%M")
+    return fig
 
-    file_path = output_dir / f"{nmi}_usage_histogram.html"
+def build_usage_heatmap(nmi: str) -> str:
+    """Save heatmap of power usage"""
+  
+    fig = usage_heatmap(nmi)
+    file_path = output_dir / f"{nmi}_usage_heatmap.html"
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
     log.info("Created %s", file_path)
     return file_path
@@ -281,7 +306,9 @@ def get_month_data(nmi: str):
     return rows
 
 
-def build_report(nmi: str):
+
+
+def build_report(nmi: str, static_mode: bool = True):
     template = env.get_template("nmi-report.html")
     start, end = get_date_range(nmi)
     fp_imp = build_daily_usage_chart(nmi, "import")
@@ -294,7 +321,7 @@ def build_report(nmi: str):
     with open(ch_daily_fp, "r") as fh:
         daily_chart = fh.read()
 
-    ch_tou_fp = build_usage_histogram(nmi)
+    ch_tou_fp = build_usage_heatmap(nmi)
     with open(ch_tou_fp, "r") as fh:
         tou_chart = fh.read()
 
@@ -314,6 +341,7 @@ def build_report(nmi: str):
         histogram_chart = fh.read()
 
     report_data = {
+        'static_mode': static_mode,
         "start": start,
         "end": end,
         "has_export": has_export,
