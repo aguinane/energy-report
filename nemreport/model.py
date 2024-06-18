@@ -1,7 +1,7 @@
 from collections import defaultdict
+from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
-from typing import Generator, Tuple
 
 import pandas as pd
 from dateutil.parser import isoparse
@@ -20,7 +20,7 @@ class EnergyReading(BaseModel):
     value: float
 
 
-def get_date_range(nmi: str) -> Tuple[datetime, datetime]:
+def get_date_range(nmi: str) -> tuple[datetime, datetime]:
     sql = """select MIN(first_interval) start, MAX(last_interval) end
             from nmi_summary where nmi = :nmi
             """
@@ -35,7 +35,7 @@ def get_usage_df(nmi: str) -> pd.DataFrame:
     imp_values = defaultdict(int)
     exp_values = defaultdict(int)
     for ch in channels:
-        feed_in = True if ch in ["B1"] else False
+        feed_in = ch in ["B1"]
         for read in get_nmi_readings(DB_PATH, nmi, ch):
             dt = read.start
             if feed_in:
@@ -66,7 +66,7 @@ def get_annual_data(nmi: str):
 
 def get_day_data(
     nmi: str,
-) -> Generator[Tuple[str, float, float], None, None]:
+) -> Generator[tuple[str, float, float], None, None]:
     sql = "SELECT day, imp, exp "
     sql += "FROM daily_reads WHERE nmi = :nmi"
     for row in db.query(sql, {"nmi": nmi}):
@@ -83,7 +83,8 @@ def get_day_profile(nmi: str):
     db.create_view(
         "combined_readings",
         """
-    SELECT nmi, t_start, t_end, SUM(CASE WHEN substr(channel,1,1) = 'B' THEN -1 * value ELSE value END) as value
+    SELECT nmi, t_start, t_end, 
+    SUM(CASE WHEN substr(channel,1,1) = 'B' THEN -1 * value ELSE value END) as value
     FROM readings
     GROUP BY nmi, t_start, t_end
     ORDER BY 1, 2
@@ -114,13 +115,13 @@ def get_day_profile(nmi: str):
         sql = """
         WITH reads AS (
         SELECT
-            (CASE WHEN CAST(strftime('%m', cr.t_start) AS INTEGER) < 3 THEN 'SUMMER'
-            ELSE (CASE WHEN CAST(strftime('%m', cr.t_start) AS INTEGER) < 6 THEN 'AUTUMN'
-            ELSE (CASE WHEN CAST(strftime('%m', cr.t_start) AS INTEGER) < 9 THEN 'WINTER'
-            ELSE (CASE WHEN CAST(strftime('%m', cr.t_start) AS INTEGER) < 12 THEN 'SPRING'
-            ELSE 'SUMMER' END) END) END) END) season,
-            strftime('%H:%M', cr.t_start) AS time,
-            cr.nmi, cr.t_start, cr.t_end, cr.value
+        (CASE WHEN CAST(strftime('%m', cr.t_start) AS INTEGER) < 3 THEN 'SUMMER'
+        ELSE (CASE WHEN CAST(strftime('%m', cr.t_start) AS INTEGER) < 6 THEN 'AUTUMN'
+        ELSE (CASE WHEN CAST(strftime('%m', cr.t_start) AS INTEGER) < 9 THEN 'WINTER'
+        ELSE (CASE WHEN CAST(strftime('%m', cr.t_start) AS INTEGER) < 12 THEN 'SPRING'
+        ELSE 'SUMMER' END) END) END) END) season,
+        strftime('%H:%M', cr.t_start) AS time,
+        cr.nmi, cr.t_start, cr.t_end, cr.value
         FROM combined_readings cr
         LEFT JOIN (SELECT NMI, MAX(last_interval) as last_interval FROM nmi_summary
         GROUP BY NMI) li ON li.nmi = cr.nmi
@@ -140,7 +141,7 @@ def get_day_profile(nmi: str):
 
 def get_day_profiles(nmi: str):
     sql = """
-WITH reads AS (
+    WITH reads AS (
     SELECT
 		strftime('%Y-%m-%d', cr.t_start) AS day,
         strftime('%H:%M', cr.t_start) AS time,

@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -22,9 +21,7 @@ def version_callback(value: bool):
 
 @app.callback()
 def callback(
-    version: Optional[bool] = typer.Option(
-        None, "--version", callback=version_callback
-    ),
+    version: bool = typer.Option(False, "--version", callback=version_callback),
 ) -> None:
     """nemreport
 

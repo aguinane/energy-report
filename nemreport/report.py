@@ -4,8 +4,6 @@ import webbrowser
 from calendar import monthrange
 from datetime import datetime, time
 from pathlib import Path
-from typing import List, Optional
-
 
 import calplot
 import pandas as pd
@@ -43,7 +41,7 @@ def format_month(dt: datetime) -> str:
 env.filters["yearmonth"] = format_month
 
 
-def build_daily_usage_chart(nmi: str, kind: str) -> Optional[Path]:
+def build_daily_usage_chart(nmi: str, kind: str) -> Path | None:
     """Save calendar plot"""
     days = []
     data = []
@@ -64,9 +62,8 @@ def build_daily_usage_chart(nmi: str, kind: str) -> Optional[Path]:
         else:
             raise ValueError("Invalid usage chart kind")
 
-    if kind == "export":
-        if max(data) == 0.0:
-            return None
+    if kind == "export" and max(data) == 0.0:
+        return None
 
     vmin = max(-35, min(data))
     vmax = min(35, max(data))
@@ -119,9 +116,10 @@ def average_daily_profiles_fig(nmi: str) -> go.Figure:
     fig.update_xaxes(dtick=12)
     return fig
 
+
 def build_day_profile_plot(nmi: str) -> str:
     """Save profile plot"""
-  
+
     fig = average_daily_profiles_fig(nmi)
     file_path = output_dir / f"{nmi}_day_profile.html"
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
@@ -192,7 +190,6 @@ def daily_total_fig(nmi: str) -> go.Figure:
     return fig
 
 
-
 def build_daily_plot(nmi: str) -> str:
     """Save daily totals plot"""
 
@@ -204,11 +201,10 @@ def build_daily_plot(nmi: str) -> str:
 
 
 def usage_heatmap(nmi: str) -> go.Figure:
-
     df = get_usage_df(nmi)
     df["power"] = df["consumption"] + df["export"]
     df["power"] = df["power"].apply(lambda x: x * 12)
-    has_export = True if len(df["export"].unique()) > 1 else False
+    has_export = len(df["export"].unique()) > 1
     colorscale = "Geyser" if has_export else "YlOrRd"
     midpoint = 0.0 if has_export else None
     start, end = get_date_range(nmi)
@@ -254,9 +250,10 @@ def usage_heatmap(nmi: str) -> go.Figure:
     fig.update_xaxes(dtick=12, tickformat="%H:%M")
     return fig
 
+
 def build_usage_heatmap(nmi: str) -> str:
     """Save heatmap of power usage"""
-  
+
     fig = usage_heatmap(nmi)
     file_path = output_dir / f"{nmi}_usage_heatmap.html"
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
@@ -299,13 +296,11 @@ def get_month_data(nmi: str):
     for row in db.query(sql, {"nmi": nmi}):
         month_desc = row["month"]
         num_days = row["num_days"]
-        year, month = [int(x) for x in month_desc.split("-")]
+        year, month = (int(x) for x in month_desc.split("-"))
         _, exp_num_days = monthrange(year, month)
-        row["incomplete"] = True if num_days < exp_num_days else False
+        row["incomplete"] = num_days < exp_num_days
         rows.append(row)
     return rows
-
-
 
 
 def build_report(nmi: str, static_mode: bool = True):
@@ -318,30 +313,30 @@ def build_report(nmi: str, static_mode: bool = True):
     has_export = True if fp_exp else None
 
     ch_daily_fp = build_daily_plot(nmi)
-    with open(ch_daily_fp, "r") as fh:
+    with open(ch_daily_fp) as fh:
         daily_chart = fh.read()
 
     ch_tou_fp = build_usage_heatmap(nmi)
-    with open(ch_tou_fp, "r") as fh:
+    with open(ch_tou_fp) as fh:
         tou_chart = fh.read()
 
     profile_fp = build_day_profile_plot(nmi)
     if profile_fp:
-        with open(profile_fp, "r") as fh:
+        with open(profile_fp) as fh:
             profile_chart = fh.read()
     else:
         profile_chart = ""
 
     profiles_fp = build_days_profiles_plot(nmi)
-    with open(profiles_fp, "r") as fh:
+    with open(profiles_fp) as fh:
         profiles_chart = fh.read()
 
     histogram_fp = build_histogram_plot(nmi)
-    with open(histogram_fp, "r") as fh:
+    with open(histogram_fp) as fh:
         histogram_chart = fh.read()
 
     report_data = {
-        'static_mode': static_mode,
+        "static_mode": static_mode,
         "start": start,
         "end": end,
         "has_export": has_export,
@@ -365,7 +360,7 @@ def build_report(nmi: str, static_mode: bool = True):
     return file_path
 
 
-def build_index(nmis: List[str]):
+def build_index(nmis: list[str]):
     template = env.get_template("index.html")
     output_html = template.render(nmis=nmis)
     file_path = output_dir / "index.html"
