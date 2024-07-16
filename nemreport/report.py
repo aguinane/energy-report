@@ -127,16 +127,23 @@ def build_day_profile_plot(nmi: str) -> str:
     return file_path
 
 
-def usage_histogram(nmi: str) -> go.Figure:
+def load_duration_curve(nmi: str) -> go.Figure:
     df = get_day_profiles(nmi)
-    fig = px.histogram(df, x="Avg kW", log_y=True)
+    fig = px.ecdf(
+        df,
+        y="Avg kW",
+        ecdfmode="complementary",
+    )
+    fig.update_layout(
+        xaxis={"title": "", "dtick": 0.1, "tickformat": ",.0%", "range": [0, 1]},
+    )
     return fig
 
 
-def build_histogram_plot(nmi: str) -> str:
+def build_load_duration_curve(nmi: str) -> str:
     """Save profile plot"""
-    fig = usage_histogram(nmi)
-    file_path = output_dir / f"{nmi}_histogram.html"
+    fig = load_duration_curve(nmi)
+    file_path = output_dir / f"{nmi}_load_duration_curve.html"
     fig.write_html(file_path, full_html=False, include_plotlyjs="cdn")
     log.info("Created %s", file_path)
     return file_path
@@ -331,9 +338,9 @@ def build_report(nmi: str, static_mode: bool = True):
     with open(profiles_fp) as fh:
         profiles_chart = fh.read()
 
-    histogram_fp = build_histogram_plot(nmi)
-    with open(histogram_fp) as fh:
-        histogram_chart = fh.read()
+    ldc_fp = build_load_duration_curve(nmi)
+    with open(ldc_fp) as fh:
+        ldc_chart = fh.read()
 
     report_data = {
         "static_mode": static_mode,
@@ -344,7 +351,7 @@ def build_report(nmi: str, static_mode: bool = True):
         "tou_chart": tou_chart,
         "profile_chart": profile_chart,
         "profiles_chart": profiles_chart,
-        "histogram_chart": histogram_chart,
+        "ldc_chart": ldc_chart,
         "imp_overview_chart": fp_imp.name,
         "exp_overview_chart": fp_exp.name if has_export else None,
         "season_data": get_seasonal_data(nmi),

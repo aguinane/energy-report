@@ -60,7 +60,7 @@
                     Made Easy</a> website.</small></p>
 
 
-        
+
         <h2>Monthly Usage</h2>
 
         <table class="table table-sm table-striped">
@@ -97,17 +97,17 @@
 
         <h2>More Charts</h2>
 
-        
+
         <figure>
             {{profile_chart}}
             <figcaption>Average Daily Profile (last 12 mth)</figcaption>
-          </figure>
+        </figure>
 
-        
-          <figure>
+
+        <figure>
             {{profiles_chart}}
             <figcaption>All Daily Profiles (last 12 mth)</figcaption>
-          </figure>          
+        </figure>
 
 
         <img src="{{imp_overview_chart}}" class="img-fluid">
@@ -120,16 +120,16 @@
         <figure>
             {{daily_chart}}
             <figcaption>Daily Totals</figcaption>
-          </figure>
-          
-        
-          <figure>
-            {{histogram_chart}}
-            <figcaption>Demand Profile (last 12 mth)</figcaption>
-          </figure>  
+        </figure>
 
-        
-        {% if not static_mode %}  
+
+        <figure>
+            {{ldc_chart}}
+            <figcaption>Load Duration Curve (last 12 mth)</figcaption>
+        </figure>
+
+
+        {% if not static_mode %}
         <h2>Tariff Calculator</h2>
 
         {% include 'tariff-calculator.html' %}
