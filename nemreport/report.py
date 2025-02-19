@@ -135,7 +135,7 @@ def load_duration_curve(nmi: str) -> go.Figure:
         ecdfmode="complementary",
     )
     fig.update_layout(
-        xaxis={"title": "", "dtick": 0.1, "tickformat": ",.0%", "range": [0, 1]},
+        xaxis={"title": "", "dtick": 0.05, "tickformat": ",.0%", "range": [0, 1]},
     )
     return fig
 

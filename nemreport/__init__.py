@@ -1,6 +1,4 @@
-""" Generate energy report from NEM meter data files
-"""
-
+"""Generate energy report from NEM meter data files"""
 
 from .version import __version__
 
