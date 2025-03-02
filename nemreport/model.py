@@ -24,7 +24,9 @@ def get_date_range(nmi: str) -> tuple[datetime, datetime]:
     sql = """select MIN(first_interval) start, MAX(last_interval) end
             from nmi_summary where nmi = :nmi
             """
-    row = list(db.query(sql, {"nmi": nmi}))[0]
+    res = db.query(sql, {"nmi": nmi})
+    res = list(res)
+    row = res[0]
     start = isoparse(row["start"])
     end = isoparse(row["end"])
     return start, end
@@ -55,13 +57,16 @@ def get_usage_df(nmi: str) -> pd.DataFrame:
 def get_season_data(nmi: str):
     sql = "SELECT *"
     sql += "FROM latest_year_seasons where nmi = :nmi"
-    return list(db.query(sql, {"nmi": nmi}))
+    res = db.query(sql, {"nmi": nmi})
+    return list(res)
 
 
 def get_annual_data(nmi: str):
     sql = "SELECT *"
     sql += "FROM latest_year where nmi = :nmi"
-    return list(db.query(sql, {"nmi": nmi}))[0]
+    res = db.query(sql, {"nmi": nmi})
+    res = list(res)
+    return res[0]
 
 
 def get_day_data(

@@ -12,7 +12,9 @@ import plotly.graph_objects as go
 from jinja2 import Environment, FileSystemLoader
 from nemreader import extend_sqlite
 from nemreader.output_db import get_nmis
+import polars as pl
 
+from great_tables import GT, md, html
 from .model import (
     DB_PATH,
     db,
@@ -301,13 +303,76 @@ def get_month_data(nmi: str):
     sql = "SELECT * from monthly_reads where nmi = :nmi"
     rows = []
     for row in db.query(sql, {"nmi": nmi}):
+        del row["nmi"]
         month_desc = row["month"]
         num_days = row["num_days"]
         year, month = (int(x) for x in month_desc.split("-"))
         _, exp_num_days = monthrange(year, month)
-        row["incomplete"] = num_days < exp_num_days
+        incomplete = num_days < exp_num_days
+        if incomplete:
+            row["month"] = row["month"] + "*"
         rows.append(row)
     return rows
+
+
+def build_month_table(nmi: str):
+    file_path = output_dir / f"{nmi}_month_table.html"
+    data = get_month_data(nmi)
+    df = pl.DataFrame(data)
+    df = df.with_columns((pl.col("imp") - pl.col("exp")).alias("net"))
+    df = df.with_columns((pl.col("net") / pl.col("num_days")).alias("net_daily"))
+    table = GT(df)
+    table = table.fmt_number(
+        columns=[
+            "exp",
+            "imp",
+            "imp_morning",
+            "imp_day",
+            "imp_evening",
+            "imp_night",
+            "net",
+            "net_daily",
+        ],
+        decimals=1,
+    )
+    table = table.tab_spanner(
+        label="Import",
+        columns=[
+            "imp",
+            "imp_morning",
+            "imp_day",
+            "imp_evening",
+            "imp_night",
+        ],
+    )
+    table = table.tab_spanner(
+        label="Export",
+        columns=["exp"],
+    )
+    table = table.tab_spanner(
+        label="Net",
+        columns=["net", "net_daily"],
+    )
+    table = table.cols_label(
+        imp_morning="Morning",
+        imp_day="Day",
+        imp_evening="Evening",
+        imp_night="Night",
+        imp="Total",
+        exp="Total",
+        net="Total",
+        net_daily="Per Day",
+        month="Month",
+        num_days="# Days",
+    )
+    table = table.data_color(
+        columns=["net_daily"],
+        palette="RdYlGn",
+        reverse=True,
+    )
+
+    table.write_raw_html(file_path)
+    return file_path
 
 
 def build_report(nmi: str, static_mode: bool = True):
@@ -318,6 +383,10 @@ def build_report(nmi: str, static_mode: bool = True):
 
     build_daily_usage_chart(nmi, "total")
     has_export = True if fp_exp else None
+
+    month_table_fp = build_month_table(nmi)
+    with open(month_table_fp) as fh:
+        month_table = fh.read()
 
     ch_daily_fp = build_daily_plot(nmi)
     with open(ch_daily_fp) as fh:
@@ -356,7 +425,7 @@ def build_report(nmi: str, static_mode: bool = True):
         "exp_overview_chart": fp_exp.name if has_export else None,
         "season_data": get_seasonal_data(nmi),
         "annual_data": get_annual_data(nmi),
-        "month_data": get_month_data(nmi),
+        "month_table": month_table,
     }
 
     output_html = template.render(nmi=nmi, **report_data)

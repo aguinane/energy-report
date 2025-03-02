@@ -19,18 +19,20 @@ keywords = ["energy", "NEM12", "NEM13"]
 requires-python = ">=3.10"
 dynamic = ["version", "description"]
 dependencies = [
-    "nemreader>=0.8.7",
-    "jinja2",
-    "pandas",
-    "plotly",
     "calplot",
-    "sqlite_utils",
+    "jinja2",
+    "nemreader>=0.8.7",
+    "pandas",
+    "great_tables",
+    "polars",
+    "plotly",
     "pydantic",
+    "sqlite_utils",
     "typer",
 ]
 
 [project.optional-dependencies]
-test = ["ruff", "pytest >=2.7.3", "pytest-cov", "mypy"]
+test = ["pytest >=2.7.3", "pytest-cov", "ruff"]
 
 [project.urls]
 Source = "https://github.com/aguinane/energy-report"

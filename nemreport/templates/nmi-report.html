@@ -63,37 +63,7 @@
 
         <h2>Monthly Usage</h2>
 
-        <table class="table table-sm table-striped">
-            <caption>Total monthly usage (kWh)</caption>
-            <thead class="thead-light">
-                <tr>
-                    <th>Month</th>
-                    <th>#Days</th>
-                    <th>Imp (<abbr title="04:00-09:00">morning</abbr>)</th>
-                    <th>Imp (<abbr title="09:00-16:00">day</abbr>)</th>
-                    <th>Imp (<abbr title="16:00-21:00">evening</abbr>)</th>
-                    <th>Imp (<abbr title="00:00-04:00 and 21:00-00:00">night</abbr>)</th>
-                    <th>Imp (total)</th>
-                    <th>Exp</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for row in month_data %}
-                <tr>
-                    <td>{{row.month}}</td>
-                    <td>{{row.num_days}}{% if row.incomplete %}*{% endif %}</td>
-                    <td>{{row.imp_morning|round(2)}}</td>
-                    <td>{{row.imp_day|round(2)}}</td>
-                    <td>{{row.imp_evening|round(2)}}</td>
-                    <td>{{row.imp_night|round(2)}}</td>
-                    <td>{{row.imp|round(2)}}</td>
-                    <td>{{row.exp|round(2)}}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
+        {{month_table}}
 
         <h2>More Charts</h2>
 
