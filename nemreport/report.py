@@ -353,6 +353,15 @@ def build_month_table(nmi: str):
         label="Net",
         columns=["net", "net_daily"],
     )
+    table = table.data_color(
+        columns=["net_daily"],
+        palette="RdYlGn",
+        reverse=True,
+    )
+    table = table.data_color(
+        columns=["imp_morning", "imp_day", "imp_evening", "imp_night"],
+        palette="OrRd",
+    )
     table = table.cols_label(
         imp_morning="Morning",
         imp_day="Day",
@@ -365,13 +374,8 @@ def build_month_table(nmi: str):
         month="Month",
         num_days="# Days",
     )
-    table = table.data_color(
-        columns=["net_daily"],
-        palette="RdYlGn",
-        reverse=True,
-    )
-
     table.write_raw_html(file_path)
+    log.info("Created %s", file_path)
     return file_path
 
 
